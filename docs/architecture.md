@@ -18,11 +18,12 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `review/` | Decisions, review sessions and what the comparison view shows | M3 |
 | `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
-| `actions/` | Planner, dry run, executor, undo and recovery. Only `executor.py` writes to sources | M4 |
+| `actions/` | Planner, dry run, executor, undo and recovery. Only `executor.py` writes to sources, quarantines and the library | M4, M5 |
+| `library/` | Which pictures are settled, the chosen copy of each, folder layouts, and the library's plan and dry run | M5 |
 | `exports/` | CSV, JSON, XMP sidecars and the optional Immich export | M1, M5, M6 |
 
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers
-`source`, `scan`, `match`, `serve`, `plan`, `apply`, `undo` and `export`.
+`source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library` and `export`.
 
 Runtime data lives outside the repo, in the OS application data folder from `platformdirs`: `photo-ledger.db`,
 thumbnails and logs. Besides the GTH packages, the dependencies are `fastapi`, `uvicorn`, `typer` and `platformdirs`,

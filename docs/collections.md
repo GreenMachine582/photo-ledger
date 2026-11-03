@@ -29,6 +29,28 @@ and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collect
 | Immich albums | Real albums, including a photo in more than one | Needs the optional export through Immich's API (M6) |
 | CSV and JSON | Everything above, for your own scripts | Includes hash, path, collections and capture date |
 
+## Building the library
+
+`photo-ledger library set <folder> [--layout year|original]` chooses an existing folder outside every source and
+quarantine. `library plan` previews the build and dry-runs it, and `library build` copies each picture in, verified
+by its hash. Originals are never changed.
+
+- **Which pictures:** Every picture that no decision rejects and that has no pair still open, skipped or needing
+  review. The rest wait for review and are counted, so the library never holds an undecided duplicate. A picture
+  whose copies can't be decoded is left out.
+- **Which copy:** The best of its present copies that no decision rejects: the higher source priority, then the
+  tidiest path. This is the same rule the reports use.
+- **`year` layout:** `YYYY/<main collection>/<filename>`, using the EXIF capture date. A picture without one goes in
+  `Undated/`, as a file date may only be the date it was restored. A collection that starts with the year itself
+  isn't repeated, so a `2019` folder gives `2019/IMG_0001.jpg`.
+- **`original` layout:** `<source label>/<path in the source>`.
+- **Main collection:** The collection of the chosen copy's own folder, or else the first, alphabetically, of the
+  collections it inherits from the copies it replaced. Hidden collections, and everything beneath them, are skipped.
+- **Names:** A name already used, ignoring case, gets ` (2)`, ` (3)` and so on. Characters that Windows doesn't allow
+  become `_`.
+- **Rebuilding:** Only adds. Files already copied keep their place. A picture rejected since stays where it is and
+  is reported. A layout can't change once files are copied, so a new layout needs a new folder.
+
 ## Tagging for Immich
 
 Write `IMG_0412.jpg.xmp` beside each library file, with hierarchical tags in `digiKam:TagsList`, which Immich reads first:

@@ -21,7 +21,10 @@ a journal entry is written before and after each operation.
 | Interrupted plan | `recovery.py` runs before `apply`, `undo` and `serve`. For each `started` action it removes any partial copy, then checks both paths: original verified and no destination means retry, destination verified and no original means done, both verified means finish the move, and anything else is marked failed with both files left alone. An action whose source or quarantine is unplugged waits |
 | Undo | A plan of its own, with `restore` actions in reverse order through the same executor. Each quarantined file is verified first, and a file created since at the original path is never overwritten. If the quarantine is offline, undo names it |
 
-By default, nothing leaves an original backup: approved keepers are copied into the destination library. Moving rejected
+By default, nothing leaves an original backup: approved keepers are copied into the destination library. The library
+must sit outside every source and quarantine. Each picture is copied the verified way: a partial file, fsync, a hash
+check, then a rename that never replaces. The original is never removed, so building has no undo and needs none. Files
+already in the library stay put: a picture rejected afterwards is reported, never deleted. Moving rejected
 copies to quarantine is opt-in for each source, with its own path, which can be on another device.
 
 A quarantine on another device makes reverts slower, not riskier. Moves and undo both copy, verify the hash, then

@@ -19,7 +19,10 @@ import sqlite3
 from dataclasses import dataclass, field
 
 from photo_ledger.actions import executor, paths
+from photo_ledger.db import library as library_queries
 from photo_ledger.db import plans as queries
+from photo_ledger.library import plan as library_plan
+from photo_ledger.library.settings import library_online
 from photo_ledger.scanner.hashing import hash_file
 from photo_ledger.sources.service import is_online
 
@@ -86,4 +89,33 @@ def recover(conn: sqlite3.Connection) -> Recovery:
         with conn:
             queries.set_status(conn, plan["id"], "incomplete")
         result.plans.append(plan["id"])
+    _recover_library(conn, result)
     return result
+
+
+def _recover_library(conn: sqlite3.Connection, result: Recovery) -> None:
+    """Settle library copies left ``started``. A library copy never removes its original, so
+    only the library side needs checking: a verified copy is done, anything missing is retried,
+    and a file that doesn't match is left alone for you to check."""
+    library = library_queries.get(conn)
+    started = library_queries.entries(conn, "started")
+    if library is None or not started:
+        return
+    if not library_online(library):
+        result.waiting.extend(f"library/{entry['rel_path']}" for entry in started)
+        return
+    for entry in started:
+        _origin, target = library_plan.endpoints(library, entry)
+        executor.discard_partial(paths.partial(target))
+        if _matches(target, entry["expected_blake3"]):
+            state, error = "done", None
+            result.done += 1
+        elif not target.exists():
+            state, error = "pending", None
+            result.pending += 1
+        else:
+            state = "failed"
+            error = f"Interrupted, and {target} doesn't match its original. It was left alone."
+            result.failed.append(error)
+        with conn:
+            library_queries.set_state(conn, entry["id"], state, error=error)

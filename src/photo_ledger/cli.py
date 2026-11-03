@@ -15,10 +15,13 @@ from photo_ledger import sources as source_service
 from photo_ledger.actions import dryrun, executor, planner, recovery
 from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
+from photo_ledger.db import library as library_queries
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.exports import csv_export, guard
 from photo_ledger.formatting import human_size
+from photo_ledger.library import plan as library_plan
+from photo_ledger.library import settings as library_settings
 from photo_ledger.matching import pairs as pair_matching
 from photo_ledger.matching import reports
 from photo_ledger.scanner import engine
@@ -30,6 +33,8 @@ app.add_typer(source_app, name="source")
 export_app = typer.Typer(help="Export the catalogue. Exports never write to a source.")
 app.add_typer(scan_app, name="scan")
 app.add_typer(export_app, name="export")
+library_app = typer.Typer(help="Build a clean library from settled pictures. Originals stay put.")
+app.add_typer(library_app, name="library")
 
 
 @app.callback()
@@ -232,6 +237,91 @@ def undo(
                 "Move the most recent plan's files back where they came from?", abort=True
             )
         _echo_applied(executor.undo(conn), "restored")
+
+
+# Library ------------------------------------------------------------------------------------
+
+
+@library_app.command("set")
+def library_set(
+    folder: Path = typer.Argument(..., help="An existing folder outside every source."),
+    layout: str = typer.Option(
+        "year", "--layout", help="year (YYYY/Collection/) or original (source/path)."
+    ),
+) -> None:
+    """Choose the library's folder and layout. Creates nothing until you build."""
+    with catalogue() as conn:
+        library = library_settings.set_library(conn, folder, layout)
+        typer.echo(f"The library is {library['root_path']}, in the '{library['layout']}' layout.")
+        typer.echo("Preview it with `photo-ledger library plan`.")
+
+
+def _echo_library_plan(summary: library_plan.LibraryPlan) -> None:
+    typer.echo(
+        f"To copy: {summary.to_copy} pictures ({human_size(summary.to_copy_bytes)}). "
+        f"Already in the library: {summary.already}."
+    )
+    if summary.waiting:
+        typer.echo(
+            f"{summary.waiting} pictures wait for review, as they still have open, skipped "
+            "or changed pairs."
+        )
+    if summary.corrupt:
+        typer.echo(f"{summary.corrupt} pictures are left out, as no copy of them can be decoded.")
+    for path in summary.no_longer_chosen:
+        typer.echo(f"  in the library but no longer chosen, and left there: {path}")
+
+
+@library_app.command("status")
+def library_status() -> None:
+    """Where the library is, whether it's connected and how much of it is built."""
+    with catalogue() as conn:
+        library = library_settings.get_library(conn)
+        state = "online" if library_settings.library_online(library) else "offline"
+        typer.echo(f"{library['root_path']}\t{state}\t{library['layout']} layout")
+        counts = library_queries.counts(conn)
+        typer.echo(", ".join(f"{counts.get(s, 0)} {s}" for s in ("done", "pending", "failed")))
+
+
+@library_app.command("plan")
+def library_plan_command() -> None:
+    """Preview what a build would copy, and dry-run it. Changes nothing on disk."""
+    with catalogue() as conn:
+        _echo_library_plan(library_plan.plan_library(conn))
+        _echo_dry_run(_library_dry_run(conn))
+
+
+def _library_dry_run(conn: sqlite3.Connection) -> dryrun.DryRun:
+    result = dryrun.DryRun(0)
+    result.problems = library_plan.check_library(conn)
+    return result
+
+
+@library_app.command("build")
+def library_build(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Copy each settled picture into the library, verified by hash. Never changes an original."""
+    with catalogue() as conn:
+        _echo_recovery(recovery.recover(conn))
+        summary = library_plan.plan_library(conn)
+        _echo_library_plan(summary)
+        pending = sum(library_queries.counts(conn).get(s, 0) for s in ("pending", "failed"))
+        if not pending:
+            typer.echo("Nothing to copy.")
+            return
+        checked = _library_dry_run(conn)
+        _echo_dry_run(checked)
+        if not checked.ok:
+            raise typer.Exit(1)
+        if not yes:
+            typer.confirm(f"Copy {pending} pictures into the library?", abort=True)
+        result = executor.build_library(conn)
+        typer.echo(f"Copied {result.copied} pictures, {len(result.failed)} failed.")
+        for message in result.failed:
+            typer.secho(f"  {message}", fg=typer.colors.RED)
+        if result.status != "complete":
+            raise typer.Exit(1)
 
 
 # Sources ------------------------------------------------------------------------------------

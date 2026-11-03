@@ -19,6 +19,8 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 | `decisions` | `id`, `pair_id`, `action`, `rejected_kind`, `rejected_id`, `caused_by`, `previous_status`, `decided_at`, `superseded_at` | Append-only review history |
 | `plans` | `id`, `status`, `undoes_plan_id`, `created_at`, `checked_at`, `applied_at` | A batch of file operations |
 | `plan_actions` | `id`, `plan_id`, `file_id`, `op`, `from_path`, `to_path`, `quarantine_root`, `quarantine_volume_id`, `expected_blake3`, `size_bytes`, `state`, `started_at`, `finished_at`, `error` | The operation journal, used for recovery and undo |
+| `library` | `id` (always 1), `root_path`, `volume_id`, `layout`, `created_at` | The destination library's folder and layout |
+| `library_entries` | `id`, `content_id`, `file_id`, `rel_path`, `expected_blake3`, `size_bytes`, `state`, `started_at`, `finished_at`, `error` | Which picture is where in the library, and the journal of copying it there |
 
 ## Notes
 
@@ -51,11 +53,16 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
   `from_path` and `to_path` are relative to the source root or to `quarantine_root`, which is copied from the source
   with its volume when the plan is built, so undo still finds a file after the quarantine setting changes. Quarantined
   copies go to `plan-<id>/<source label>/<rel_path>`.
+- **Library:** There's one, set with `library set`. `layout` is `year` or `original`, and can't change once files are
+  copied. Choosing a new folder forgets the entries and leaves the old folder as it is.
+- **Library entries:** One per picture (`content_id` is unique), naming the copy it comes from and its `rel_path`
+  under the library root, which is unique ignoring case. `state` is `pending`, `started`, `done` or `failed`. Entries
+  that are `done` keep their place for good. A rebuild replaces the unbuilt ones and only ever adds files.
 - **Pairs:** `left_id` and `right_id` are file IDs for `exact` pairs and content IDs for `similar` and `name_conflict`.
   `status` is `open`, `skipped`, `resolved`, `needs_review` or `obsolete`, the last for a pair that stopped matching,
   such as when a copy went missing. An exact pair's `evidence` is its BLAKE3, so a resolved pair whose files changed
   content comes back as `needs_review`.
 
 The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables, `0002`
-adds `review_pairs`, `0003` adds `collections` and `collection_folders`, `0004` adds `decisions`, and `0005` adds
-`plans` and `plan_actions`.
+adds `review_pairs`, `0003` adds `collections` and `collection_folders`, `0004` adds `decisions`, `0005` adds
+`plans` and `plan_actions`, and `0006` adds `library` and `library_entries`.
