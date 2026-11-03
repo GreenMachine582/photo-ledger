@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.4.0...v0.5.0) (2026-11-03)
+
+
+### Features
+
+* apply plans safely, with quarantine, a journal and undo (M4) ([#11](https://github.com/GreenMachine582/photo-ledger/issues/11)) ([4b57761](https://github.com/GreenMachine582/photo-ledger/commit/4b57761fc90ad8dfd655ff4ef9d6702bf9315e82))
+
 ## [0.4.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.3.0...v0.4.0) (2026-11-03)
 
 
