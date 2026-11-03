@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M0 done.** The repo, app shell, health check and release automation are in place. Scanning arrives in M1. See [TODO.md](TODO.md).
+> **Status: M1 done.** Sources can be mapped and scanned from the CLI, with resumable scans, verification and CSV export. Duplicate detection arrives in M2. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 
@@ -45,6 +45,18 @@ uv pip install -e ".[dev]"
 ```
 
 Then open <http://127.0.0.1:8765>. On Windows, use `.venv\Scripts\photo-ledger serve`.
+
+Scanning works from the command line. It only ever reads your files:
+
+```bash
+photo-ledger source add /media/usb-1/Photos --label usb-1
+photo-ledger scan create "Old drives" --sources usb-1
+photo-ledger scan run "Old drives"            # Ctrl+C pauses; run it again to resume
+photo-ledger scan run "Old drives" --verify   # re-hash everything instead of trusting size and date
+photo-ledger export csv catalogue.csv
+```
+
+To try it without real photos, `python scripts/make_fixtures.py <empty-folder>` generates a test tree.
 
 The catalogue and thumbnails live in your OS application data folder, never in this repo. Set
 `PHOTO_LEDGER_DATA_DIR` to move them, and `PHOTO_LEDGER_PORT` to change the port.

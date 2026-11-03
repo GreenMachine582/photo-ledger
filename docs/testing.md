@@ -2,7 +2,7 @@
 
 # 🧪 Testing
 
-This repo is public, so real photos never appear in it. `scripts/make_fixtures.py` (M1) generates test images: exact copies,
+This repo is public, so real photos never appear in it. `scripts/make_fixtures.py` generates test images: exact copies,
 resized and re-encoded versions, reused filenames, conflicting dates and truncated files.
 
 | Layer | What it proves |

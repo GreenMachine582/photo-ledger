@@ -1,7 +1,9 @@
+import make_fixtures
 import pytest
 from fastapi.testclient import TestClient
 
 from photo_ledger.config import Settings
+from photo_ledger.db import open_db
 from photo_ledger.web.app import create_app
 
 
@@ -13,3 +15,17 @@ def settings(tmp_path) -> Settings:
 @pytest.fixture
 def client(settings) -> TestClient:
     return TestClient(create_app(settings), base_url="http://127.0.0.1")
+
+
+@pytest.fixture
+def db(tmp_path):
+    conn = open_db(tmp_path / "data" / "photo-ledger.db")
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+def fixture_tree(tmp_path):
+    """Generated photos under ``tmp_path/photos``, with the manifest from make_fixtures."""
+    root = tmp_path / "photos"
+    return root, make_fixtures.build(root)
