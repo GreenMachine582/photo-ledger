@@ -29,6 +29,10 @@ Every decision saves immediately, so you can stop at any point and pick up where
 | `S` | Skip | The pair stays open and moves to the skipped list, to return to later |
 | `Z` | Undo | Reverts the last review decision, without touching any files |
 
+Keeping one side rejects the other: the file in an exact pair, or every copy of the image in a similar or
+name-conflict pair. The rejected item's other open pairs close with it, so N copies of a photo take N − 1 reviews.
+Deciding a pair again replaces the earlier decision.
+
 `Z` is not the same as `undo` on the command line, which reverses an applied plan. Reviewing never touches files:
 decisions only build a plan.
 
@@ -55,6 +59,11 @@ else. See [rescans.md](rescans.md).
   to exact duplicates only, and always go through this page.
 
 ## Building it
+
+Run `photo-ledger serve` and open <http://127.0.0.1:8765/review>. Each side shows a cached preview, which opens the
+original when clicked, and the differences between the two are highlighted. Images come from `/files/<id>/preview` and
+`/files/<id>/original`, looked up by ID in the catalogue. Previews are cached in the data folder's `thumbnails`, so an
+offline source can still be reviewed.
 
 Pages use `gth-*` macros for the shell, tables, filters, modals and toasts. gth-ui has no image comparison component, so
 that view is built in this repo. It moves upstream only if another service needs it. `web/static/` holds only the
