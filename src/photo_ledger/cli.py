@@ -285,7 +285,7 @@ def scan_list() -> None:
         for row in rows:
             typer.echo(
                 f"{row['name']}	{row['status']}	{row['source_labels']}"
-                f"	{row['last_opened_at'] or '-'}"
+                f"	{(row['last_opened_at'] or '-')[:19]}"
             )
 
 

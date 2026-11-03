@@ -4,6 +4,7 @@
 {% from "empty_state.html" import gth_empty_state %}
 {% from "form.html" import gth_csrf_field %}
 {% from "toast.html" import gth_alert %}
+{% from "select.html" import gth_select %}
 {% set page_title = "Review" %}
 {% if view %}
 {% set kind_label = view.pair.kind.replace("_", " ") %}
@@ -15,13 +16,22 @@
 {% block extra_head %}<link rel="stylesheet" href="/static/review.css">{% endblock %}
 
 {% block page %}
-{% block session %}{% endblock %}
+<form method="get" action="/review" class="pl-session" aria-label="Review session">
+  {%- set scan_options = [("", "All scans")] %}{% for name in scans %}{% set _ = scan_options.append((name, name)) %}{% endfor %}
+  {{ gth_select("scan", "Scope", scan_options, value=filters.scan or "", field_class="mb-0") }}
+  {%- set show_options = [] %}{% for key, label in show_labels.items() %}{% set _ = show_options.append((key, label ~ " (" ~ counts[key] ~ ")")) %}{% endfor %}
+  {{ gth_select("show", "Show", show_options, value=filters.show, field_class="mb-0") }}
+  {%- set kind_options = [("", "Any kind")] %}{% for kind in kinds %}{% set _ = kind_options.append((kind, kind.replace("_", " ")|capitalize)) %}{% endfor %}
+  {{ gth_select("kind", "Kind", kind_options, value=filters.kind or "", field_class="mb-0") }}
+  {{ gth_select("matches", "Matches", [("any", "Any match"), ("inside", "Only inside the scan's sources")], value=filters.matches, field_class="mb-0") }}
+  <button type="submit" class="btn btn-primary">Start</button>
+</form>
 {% if notice %}{{ gth_alert(notice, kind="warning") }}{% endif %}
 {% if not view %}
 {{ gth_empty_state(empty_message|default("Nothing left to review here. Run `photo-ledger match` after a scan to find more.")) }}
 {% else %}
 {% if view.decision %}
-{{ gth_alert("Already decided: " ~ view.decision.action.replace("_", " ") ~ " on " ~ view.decision.decided_at ~ ". Deciding again replaces it.", kind="info") }}
+{{ gth_alert("Already decided: " ~ view.decision.action.replace("_", " ") ~ " on " ~ view.decision.decided_at[:16].replace("T", " ") ~ " UTC. Deciding again replaces it.", kind="info") }}
 {% endif %}
 <div class="pl-compare">
   {% for name, side in (("left", view.left), ("right", view.right)) %}
@@ -65,8 +75,13 @@
     <button type="submit" class="btn btn-outline-secondary" data-key="{{ key }}"><kbd>{{ key }}</kbd> {{ label }}</button>
   </form>
   {% endfor %}
-  {% block undo %}{% endblock %}
 </div>
+{% endif %}
+{% if can_undo %}
+<form method="post" action="/review/undo{{ query }}" class="pl-undo">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="submit" class="btn btn-link" data-key="Z"><kbd>Z</kbd> Undo the last decision</button>
+</form>
 {% endif %}
 {% endblock %}
 

@@ -45,6 +45,14 @@ decisions only build a plan.
 | Kind | Exact, similar or name conflict |
 | Matches | Any match, or only matches inside the scan's sources |
 
+A session is just these choices, kept in the page's address, such as `/review?scan=Old%20drives&show=skipped`, so you
+can bookmark one or switch at any time. "Any match" includes a pair when at least one copy is in the scan's sources;
+"only inside" needs a copy of both sides there. "New since the scan last ran" lists open pairs created since the scan's
+latest round started. Pairs are shown exact duplicates first, then similar images, then name conflicts.
+
+`Z` undoes the most recent decision anywhere, along with the pairs it closed, and goes back to that pair. Press it
+again to step further back.
+
 Decisions are stored per pair, not per scan or session. Resolving a pair in one scan resolves the same pair everywhere
 else. See [rescans.md](rescans.md).
 

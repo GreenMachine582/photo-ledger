@@ -102,3 +102,15 @@
 .pl-actions form {
   margin: 0;
 }
+
+.pl-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pl-undo {
+  margin-top: 0.5rem;
+}

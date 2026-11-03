@@ -132,3 +132,41 @@ def test_review_links_from_the_nav(ledger, web):
 def test_exact_pair_lookup_helper(ledger):
     conn, _, _ = ledger
     assert exact_pair(conn, "camera/2019/IMG_0001.jpg", "backup/Holiday 2019/IMG_0001.jpg")
+
+
+def test_a_session_keeps_its_filters(ledger, web):
+    conn, _, _ = ledger
+    page = web.get("/review?scan=all&kind=similar")
+    assert "Pair 1 of 2" in page.text
+    first = queue(conn)[5]  # the first similar pair
+    assert f'action="/review/{first}/decide?scan=all&amp;kind=similar"' in page.text
+    done = web.post(
+        f"/review/{first}/decide?scan=all&kind=similar",
+        data={"action": "skip", "csrf_token": csrf(web)},
+        follow_redirects=False,
+    )
+    assert done.headers["location"] == "/review?scan=all&kind=similar"
+    skipped = web.get("/review?show=skipped").text
+    assert "Pair 1 of 1" in skipped
+    assert "Skipped (1)" in skipped
+
+
+def test_undo_returns_to_the_pair(ledger, web):
+    conn, _, _ = ledger
+    first = queue(conn)[0]
+    assert 'data-key="Z"' not in web.get("/review").text  # nothing to undo yet
+    web.post(f"/review/{first}/decide", data={"action": "keep_left", "csrf_token": csrf(web)})
+    assert 'data-key="Z"' in web.get("/review").text
+    assert web.post("/review/undo").status_code == 403
+    undone = web.post(
+        "/review/undo?kind=exact", data={"csrf_token": csrf(web)}, follow_redirects=False
+    )
+    assert undone.headers["location"] == f"/review?kind=exact&pair={first}"
+    assert status(conn, first) == "open"
+    assert "Pair 1 of 5" in web.get(undone.headers["location"]).text
+
+
+def test_an_unknown_scan_is_explained(ledger, web):
+    response = web.get("/review?scan=nope")
+    assert response.status_code == 409
+    assert "no scan called" in response.text
