@@ -169,8 +169,35 @@ def source_list() -> None:
         for row in rows:
             state = "online" if source_service.refresh_state(conn, row) else "offline"
             volume = row["device_label"] or row["volume_id"] or ""
+            quarantine = f"quarantine {row['quarantine_path']}" if row["quarantine_enabled"] else ""
             typer.echo(
                 f"{row['label']}\t{state}\t{row['source_type']}\t{row['root_path']}\t{volume}"
+                + (f"\t{quarantine}" if quarantine else "")
+            )
+
+
+@source_app.command("quarantine")
+def source_quarantine(
+    label: str = typer.Argument(..., help="The source whose rejected copies may move."),
+    path: Path | None = typer.Argument(
+        None, help="An existing folder outside every source, on any device."
+    ),
+    off: bool = typer.Option(False, "--off", help="Turn quarantine off for this source."),
+) -> None:
+    """Opt a source in to moving rejected copies into a quarantine folder. Off by default."""
+    if off == (path is not None):
+        typer.secho("Pass either a quarantine folder or --off.", err=True)
+        raise typer.Exit(2)
+    with catalogue() as conn:
+        source, same_volume = source_service.set_quarantine(conn, label, None if off else path)
+        if off:
+            typer.echo(f"Quarantine is off for '{label}'. Its rejected copies stay where they are.")
+            return
+        typer.echo(f"Rejected copies in '{label}' can move to {source['quarantine_path']}.")
+        if same_volume is False:
+            typer.echo(
+                "It's on another device, so moves copy and verify each file. A folder on the "
+                "source's own drive would be faster."
             )
 
 

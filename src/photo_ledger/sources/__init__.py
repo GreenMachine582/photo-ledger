@@ -7,9 +7,12 @@ from photo_ledger.sources.service import (
     get_source,
     is_online,
     list_sources,
+    quarantine_device,
+    quarantine_online,
     reconnect,
     refresh_state,
     set_priority,
+    set_quarantine,
 )
 
 __all__ = [
@@ -19,7 +22,10 @@ __all__ = [
     "get_source",
     "is_online",
     "list_sources",
+    "quarantine_device",
+    "quarantine_online",
     "reconnect",
     "refresh_state",
     "set_priority",
+    "set_quarantine",
 ]

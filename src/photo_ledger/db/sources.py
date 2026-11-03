@@ -47,5 +47,15 @@ def set_state(conn: sqlite3.Connection, source_id: int, state: str) -> None:
     conn.execute("UPDATE sources SET state = ? WHERE id = ?", (state, source_id))
 
 
+def set_quarantine(
+    conn: sqlite3.Connection, source_id: int, *, path: str | None, volume_id: str | None
+) -> None:
+    conn.execute(
+        "UPDATE sources SET quarantine_enabled = ?, quarantine_path = ?, quarantine_volume_id = ?"
+        " WHERE id = ?",
+        (int(path is not None), path, volume_id, source_id),
+    )
+
+
 def set_priority(conn: sqlite3.Connection, source_id: int, priority: int) -> None:
     conn.execute("UPDATE sources SET priority = ? WHERE id = ?", (priority, source_id))

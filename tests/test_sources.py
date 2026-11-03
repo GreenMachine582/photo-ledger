@@ -128,3 +128,64 @@ def test_reconnect_refuses_an_overlap(db, tmp_path):
     sources.add_source(db, tmp_path / "b", "b")
     with pytest.raises(sources.SourceError, match="overlaps"):
         sources.reconnect(db, "a", tmp_path / "b" / "inner")
+
+
+def test_quarantine_records_its_volume_and_turns_off(db, tmp_path, fake_volume):
+    (tmp_path / "usb").mkdir()
+    (tmp_path / "q").mkdir()
+    sources.add_source(db, tmp_path / "usb", "usb")
+    source, same = sources.set_quarantine(db, "usb", tmp_path / "q")
+    assert source["quarantine_enabled"] == 1
+    assert source["quarantine_path"] == str((tmp_path / "q").resolve())
+    assert source["quarantine_volume_id"] == "AAAA-0001"
+    assert same is True
+    assert sources.quarantine_online(source)
+
+    fake_volume["id"] = "BBBB-0002"  # another drive now sits at the quarantine's path
+    assert not sources.quarantine_online(source)
+    assert "AAAA-0001" in sources.quarantine_device(source)
+
+    source, same = sources.set_quarantine(db, "usb", None)
+    assert source["quarantine_enabled"] == 0
+    assert source["quarantine_path"] is None
+    assert same is None
+    assert not sources.quarantine_online(source)
+
+
+def test_quarantine_on_another_volume_is_reported(db, tmp_path, fake_volume):
+    (tmp_path / "usb").mkdir()
+    (tmp_path / "q").mkdir()
+    sources.add_source(db, tmp_path / "usb", "usb")
+    fake_volume["id"] = "BBBB-0002"
+    _source, same = sources.set_quarantine(db, "usb", tmp_path / "q")
+    assert same is False
+
+
+def test_quarantine_must_exist_and_sit_outside_every_source(db, tmp_path):
+    (tmp_path / "a" / "inner").mkdir(parents=True)
+    (tmp_path / "b").mkdir()
+    sources.add_source(db, tmp_path / "a", "a")
+    sources.add_source(db, tmp_path / "b", "b")
+    with pytest.raises(sources.SourceError, match="doesn't exist"):
+        sources.set_quarantine(db, "a", tmp_path / "missing")
+    with pytest.raises(sources.SourceError, match="overlaps source 'a'"):
+        sources.set_quarantine(db, "b", tmp_path / "a" / "inner")
+    assert not (tmp_path / "missing").exists()
+
+
+def test_a_source_inside_a_quarantine_is_refused(db, tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "q" / "inner").mkdir(parents=True)
+    sources.add_source(db, tmp_path / "a", "a")
+    sources.set_quarantine(db, "a", tmp_path / "q")
+    with pytest.raises(sources.SourceError, match="quarantine"):
+        sources.add_source(db, tmp_path / "q" / "inner", "inner")
+
+
+def test_quarantine_offline_when_its_folder_is_gone(db, tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "q").mkdir()
+    sources.add_source(db, tmp_path / "a", "a")
+    source, _ = sources.set_quarantine(db, "a", tmp_path / "q")
+    (tmp_path / "q").rename(tmp_path / "q-moved")
+    assert not sources.quarantine_online(source)

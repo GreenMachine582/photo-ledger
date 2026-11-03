@@ -47,6 +47,17 @@ def test_source_commands(tmp_path, monkeypatch):
     assert moved.exit_code == 0, moved.output
     assert "pc\tonline" in runner.invoke(cli.app, ["source", "list"]).stdout
 
+    (tmp_path / "q").mkdir()
+    quarantined = runner.invoke(cli.app, ["source", "quarantine", "pc", str(tmp_path / "q")])
+    assert quarantined.exit_code == 0, quarantined.output
+    assert "can move to" in quarantined.stdout
+    assert "quarantine" in runner.invoke(cli.app, ["source", "list"]).stdout
+    both = runner.invoke(cli.app, ["source", "quarantine", "pc", str(tmp_path / "q"), "--off"])
+    assert both.exit_code == 2
+    off = runner.invoke(cli.app, ["source", "quarantine", "pc", "--off"])
+    assert off.exit_code == 0, off.output
+    assert "quarantine" not in runner.invoke(cli.app, ["source", "list"]).stdout
+
 
 def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     root, manifest = fixture_tree

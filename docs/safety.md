@@ -13,7 +13,7 @@ the filesystem can't commit together, so a journal entry is written before and a
 | Destination | Never overwrite an existing file |
 | Same volume | Use an atomic rename where supported |
 | Across volumes | Copy, verify the hash, then remove the original |
-| Quarantine | Off by default. Configured per source, on any device, and suggested on the same volume because that's faster |
+| Quarantine | Off by default. Turned on per source with `source quarantine <label> <folder>`, on any device, and suggested on the same volume because that's faster. The folder must already exist and sit outside every source, and no source can be mapped inside it |
 | Interrupted plan | On next start, `recovery.py` finds unfinished actions and checks both paths before continuing or rolling back |
 | Undo | Verify the quarantined file, and never overwrite a file created since |
 
