@@ -49,7 +49,9 @@ def test_source_commands(tmp_path, monkeypatch):
 
 
 def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
-    root, _ = fixture_tree
+    root, manifest = fixture_tree
+    camera_files = sum(rel.startswith("camera/") for rel in manifest["files"])
+    camera_photos = manifest["supported"]["camera"]
     monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(tmp_path / "data"))
     runner = CliRunner()
     for label in ("camera", "backup"):
@@ -62,7 +64,7 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
 
     ran = runner.invoke(cli.app, ["scan", "run", "Old drives"])
     assert ran.exit_code == 0, ran.output
-    assert "camera: complete. 5 listed" in ran.stdout
+    assert f"camera: complete. {camera_files} listed" in ran.stdout
     assert "Scan 'Old drives' is complete." in ran.stdout
 
     listed = runner.invoke(cli.app, ["scan", "list"])
@@ -75,11 +77,14 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
 
     verified = runner.invoke(cli.app, ["scan", "run", "Old drives", "--verify"])
     assert verified.exit_code == 0, verified.output
-    assert "camera: complete. 5 listed, 0 unchanged, 4 hashed (0 new)" in verified.stdout
+    assert (
+        f"camera: complete. {camera_files} listed, 0 unchanged, {camera_photos} hashed (0 new)"
+        in verified.stdout
+    )
 
     exported = runner.invoke(cli.app, ["export", "csv", str(tmp_path / "out.csv")])
     assert exported.exit_code == 0, exported.output
-    assert "Wrote 12 files" in exported.stdout
+    assert f"Wrote {len(manifest['files'])} files" in exported.stdout
     inside = runner.invoke(cli.app, ["export", "csv", str(root / "camera" / "out.csv")])
     assert inside.exit_code == 1
 

@@ -31,3 +31,14 @@ def test_main_refuses_a_non_empty_directory(tmp_path):
     (tmp_path / "keep.txt").write_text("x")
     assert make_fixtures.main(["make_fixtures.py", str(tmp_path)]) == 1
     assert make_fixtures.main(["make_fixtures.py", str(tmp_path / "new")]) == 0
+
+
+def test_camera_files_are_dated_when_taken(fixture_tree):
+    root, manifest = fixture_tree
+    taken = (root / "camera/2019/IMG_0001.jpg").stat().st_mtime_ns
+    # 10:00 at +10:00 is midnight UTC.
+    assert (
+        taken == 1_559_347_200_000_000_000 == make_fixtures.camera_mtime_ns("2019:06:01 10:00:00")
+    )
+    assert manifest["supported"] == {"camera": 5, "backup": 8}
+    assert manifest["unique_contents"] == 9
