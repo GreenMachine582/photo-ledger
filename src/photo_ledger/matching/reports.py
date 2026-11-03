@@ -10,6 +10,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
+from photo_ledger.collections.folders import collection_paths, collections_by_content, folder_of
+from photo_ledger.db import collections as collection_queries
 from photo_ledger.db import pairs as pair_queries
 from photo_ledger.matching.scoring import best_copy
 from photo_ledger.scanner.engine import get_scan
@@ -63,8 +65,20 @@ def pairs_report(
     _, by_id, by_content = _copies(conn)
     report = Report(
         "Pairs",
-        ("id", "kind", "status", "distance", "left", "right", "keep", "because", "against"),
+        (
+            "id",
+            "kind",
+            "status",
+            "distance",
+            "left",
+            "right",
+            "keep",
+            "because",
+            "against",
+            "collections",
+        ),
     )
+    inherited = collections_by_content(conn)
     query, params = "SELECT * FROM review_pairs WHERE 1 = 1", []
     if kind:
         query, params = query + " AND kind = ?", [*params, kind]
@@ -94,6 +108,13 @@ def pairs_report(
                 score.get("keep") or "",
                 "; ".join(score.get("reasons", [])),
                 "; ".join(score.get("against", [])),
+                "; ".join(
+                    sorted(
+                        set().union(
+                            *(inherited.get(f["content_id"], set()) for f in sides[0] + sides[1])
+                        )
+                    )
+                ),
             )
         )
     return report
@@ -259,6 +280,43 @@ def summary_report(conn: sqlite3.Connection, scan: str | None = None) -> Report:
     return report
 
 
+def collections_report(conn: sqlite3.Connection, scan: str | None = None) -> Report:
+    """Collections from folder names, with what maps to each directly."""
+    scope = _scope(conn, scan)
+    report = Report("Collections", ("collection", "hidden", "folders", "files", "contents"))
+    paths = collection_paths(conn)
+    mapped = collection_queries.mapped_folders(conn)
+    folders, files, contents = defaultdict(set), defaultdict(int), defaultdict(set)
+    for (source_id, folder), collection_id in mapped.items():
+        if scope is None or source_id in scope:
+            folders[collection_id].add((source_id, folder))
+    for content_id, source_id, rel_path in collection_queries.content_files(conn):
+        collection_id = mapped.get((source_id, folder_of(rel_path)))
+        if collection_id is not None and (scope is None or source_id in scope):
+            files[collection_id] += 1
+            contents[collection_id].add(content_id)
+    hidden = {row["id"]: bool(row["hidden"]) for row in collection_queries.all_collections(conn)}
+    for collection_id, path in sorted(paths.items(), key=lambda item: item[1].casefold()):
+        if (
+            scope is not None
+            and not folders[collection_id]
+            and not any(
+                other.startswith(path + "/") and folders[cid] for cid, other in paths.items()
+            )
+        ):
+            continue
+        report.rows.append(
+            (
+                path,
+                "yes" if hidden[collection_id] else "",
+                len(folders[collection_id]),
+                files[collection_id],
+                len(contents[collection_id]),
+            )
+        )
+    return report
+
+
 REPORTS = {
     "summary": summary_report,
     "pairs": pairs_report,
@@ -266,4 +324,5 @@ REPORTS = {
     "dates": dates_report,
     "single-source": single_source_report,
     "corrupt": corrupt_report,
+    "collections": collections_report,
 }

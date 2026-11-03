@@ -12,6 +12,7 @@ import uvicorn
 
 from photo_ledger import __version__
 from photo_ledger import sources as source_service
+from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
@@ -79,8 +80,14 @@ def match(
     ),
 ) -> None:
     """Find exact duplicates, similar images and name conflicts. Only reads the catalogue."""
-    limit = Settings().photo_ledger_similar_threshold if threshold is None else threshold
+    settings = Settings()
+    limit = settings.photo_ledger_similar_threshold if threshold is None else threshold
     with catalogue() as conn:
+        collections = refresh_collections(conn, settings.photo_ledger_generic_folders)
+        typer.echo(
+            f"Collections from folder names: {collections.total_collections} "
+            f"({collections.new_collections} new, {collections.new_folders} folders mapped)."
+        )
         result = pair_matching.match(conn, limit)
         found = ", ".join(
             f"{n} {kind.replace('_', ' ')}" for kind, n in sorted(result.by_kind.items())

@@ -75,5 +75,6 @@ ones it loses, and only you make the decision. A similar or name-conflict pair c
 | `dates` | Files whose file date and EXIF capture date are more than 24 hours apart |
 | `single-source` | Content seen in only one source |
 | `corrupt` | Corrupt and unreadable files |
+| `collections` | Collections from folder names, with the folders, files and contents mapped to each |
 
 Similar matches are never resolved automatically. Bulk actions apply to exact duplicates only and pass through the plan.

@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M1 done.** Sources can be mapped and scanned from the CLI, with resumable scans, verification and CSV export. Duplicate detection arrives in M2. See [TODO.md](TODO.md).
+> **Status: M2 done.** From the CLI you can map and scan sources, find exact duplicates, similar images and name conflicts with explained keeper suggestions, and read mismatch and collection reports. The review screen arrives in M3. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 
@@ -53,6 +53,8 @@ photo-ledger source add /media/usb-1/Photos --label usb-1
 photo-ledger scan create "Old drives" --sources usb-1
 photo-ledger scan run "Old drives"            # Ctrl+C pauses; run it again to resume
 photo-ledger scan run "Old drives" --verify   # re-hash everything instead of trusting size and date
+photo-ledger match                            # find duplicates, similar images and name conflicts
+photo-ledger report pairs                     # also: summary, renamed, dates, single-source, corrupt, collections
 photo-ledger export csv catalogue.csv
 ```
 

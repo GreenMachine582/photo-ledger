@@ -7,6 +7,8 @@ from greentechhub_core.config import GTHBaseSettings
 from platformdirs import user_data_path
 from pydantic import Field
 
+from photo_ledger.collections.folders import DEFAULT_GENERIC_FOLDERS
+
 #: The only addresses the app answers on. See web/security.py.
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 
@@ -24,6 +26,10 @@ class Settings(GTHBaseSettings):
     photo_ledger_port: int = 8765
     #: Largest pHash Hamming distance, out of 64 bits, that counts as a similar image.
     photo_ledger_similar_threshold: int = Field(default=8, ge=0, le=32)
+    #: Folder names that never become collections, matched case-insensitively.
+    photo_ledger_generic_folders: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_GENERIC_FOLDERS)
+    )
 
     @property
     def db_path(self) -> Path:

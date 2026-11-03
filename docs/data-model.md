@@ -38,10 +38,13 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 - **Contents:** A file whose content failed to decode has a `decode_error` and the status `corrupt`. Its BLAKE3 is
   still recorded, so exact copies of a broken file are still found.
 
+- **Collections:** Unique by name within their parent, ignoring case. `collection_folders` maps a source's folder to
+  its deepest collection, and rows are only ever added, so renames and merges survive rescans.
 - **Pairs:** `left_id` and `right_id` are file IDs for `exact` pairs and content IDs for `similar` and `name_conflict`.
   `status` is `open`, `skipped`, `resolved`, `needs_review` or `obsolete`, the last for a pair that stopped matching,
   such as when a copy went missing. An exact pair's `evidence` is its BLAKE3, so a resolved pair whose files changed
   content comes back as `needs_review`.
 
-The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables and `0002`
-adds `review_pairs`. The collection, decision and plan tables arrive with their milestones.
+The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables, `0002`
+adds `review_pairs` and `0003` adds `collections` and `collection_folders`. The decision and plan tables arrive with
+their milestones.

@@ -5,12 +5,6 @@
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
 nothing can change your files until M4.
 
-## M2 Detect
-
-Done when a read-only report matches a hand-checked sample, and rescanning the same files creates no new pairs.
-
-- [ ] Collections from folder names
-
 ## M3 Review
 
 Done when decisions survive a restart, a pair resolved in one scan is resolved in the others, and a rescan after adding

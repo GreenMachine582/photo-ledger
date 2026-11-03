@@ -92,6 +92,9 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     assert matched.exit_code == 0, matched.output
     assert "threshold of 8: 5 exact, 1 name conflict, 2 similar." in matched.stdout
     assert "8 new" in matched.stdout
+    assert "Collections from folder names: 10 (10 new, 8 folders mapped)." in matched.stdout
+    collections = runner.invoke(cli.app, ["report", "collections"]).stdout
+    assert "Holidays/2019/Japan		1	1	1" in collections
     assert "0 new" in runner.invoke(cli.app, ["match", "--threshold", "8"]).stdout
 
     summary = runner.invoke(cli.app, ["report"])
