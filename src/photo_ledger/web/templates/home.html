@@ -1,0 +1,8 @@
+{% extends "page.html" %}
+{% from "empty_state.html" import gth_empty_state %}
+{% set page_title = "Photo Ledger" %}
+{% set page_subtitle = "Catalogue backups, find duplicates and organise them safely." %}
+
+{% block page %}
+{{ gth_empty_state("No sources mapped yet. Source mapping arrives in M1.") }}
+{% endblock %}

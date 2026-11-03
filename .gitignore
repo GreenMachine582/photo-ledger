@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Testing and linters
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data: this repo is public, so it never holds a catalogue or photos
+*.db
+*.db-shm
+*.db-wal
+thumbnails/
+data/
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
