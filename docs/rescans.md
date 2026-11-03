@@ -9,8 +9,11 @@ drive, a network folder or removable media. The same scanner handles all four.
 
 - **Device details:** The storage type, volume identifier, label, filesystem and capacity are recorded on a best-effort
   basis. Nothing depends on knowing them in advance.
-- **Reconnecting:** If a drive letter or mount path changes, the app tries to recognise the volume and asks you to
-  confirm the new root.
+- **Reconnecting:** If a drive letter or mount path changes, `source reconnect <label>` looks for the volume it was
+  mapped on and asks you to confirm the new root. You can also pass the new root yourself. A root on a different
+  volume is refused, so map that drive as a new source instead.
+- **Online:** A source is online when its root exists and, where both are known, is on the volume it was mapped on.
+  A different drive at the same letter counts as offline. `source list` shows each source's state.
 - **Offline sources:** A disconnected source shows as offline, and its files are never marked missing. Reviews use
   cached thumbnails until it comes back.
 - **Overlaps:** A mapping nested inside another source is refused, because it would record every file twice.
