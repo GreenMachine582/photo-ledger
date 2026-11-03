@@ -5,13 +5,6 @@
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
 nothing can change your files until M4.
 
-## M3 Review
-
-Done when decisions survive a restart, a pair resolved in one scan is resolved in the others, and a rescan after adding
-files queues only the new pairs.
-
-- [ ] Check that the Secure CSRF cookie works on `127.0.0.1` in Firefox and Edge (confirmed in Chromium)
-
 ## M4 Apply safely
 
 Done when a plan applied and undone restores the fixture set exactly, including across volumes, and a simulated crash

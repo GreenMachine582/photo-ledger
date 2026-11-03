@@ -36,4 +36,5 @@ The app binds to `127.0.0.1`, but any website you visit can make your browser se
 | No cross-origin access | CORS has no allowed origins |
 | No arbitrary paths | The image route serves only registered files |
 
-The CSRF cookie is `Secure`. Chromium sends it to `127.0.0.1` over plain HTTP, which this project relies on.
+The CSRF cookie is `Secure`. Chromium, Firefox and Edge all send it to `127.0.0.1` over plain HTTP, which this project
+relies on.
