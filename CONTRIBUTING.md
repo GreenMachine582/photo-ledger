@@ -40,6 +40,17 @@ release-please keeps a `chore(main): release X.Y.Z` PR open on `main`, with the 
 from the commits. Merging it tags `vX.Y.Z` and publishes the GitHub Release. Never bump versions or edit released
 changelog sections by hand, and never move a `v*` tag.
 
+Release PRs are opened with a token from the `gth-release-bot` GitHub App, so they trigger CI. GitHub doesn't run CI on
+PRs made with `GITHUB_TOKEN`. To set it up in a new repo:
+
+1. In the app's settings (GitHub → Settings → Developer settings → GitHub Apps → `gth-release-bot`), make sure it's
+   installed on the repo, with read and write access to contents and pull requests.
+2. Copy its Client ID: `gh variable set RELEASE_APP_CLIENT_ID --body <client-id>`.
+3. Under **Private keys**, generate a key. Existing keys keep working. Then run
+   `gh secret set RELEASE_APP_PRIVATE_KEY < key.pem` and delete the downloaded `.pem`.
+
+Without them, release-please falls back to `GITHUB_TOKEN`, and its PR needs CI re-run by hand.
+
 ## 📌 GTH pins
 
 `pyproject.toml` pins greentechhub-core, -fastapi and -ui to tags. Bump them together, and only to tags. The core pin

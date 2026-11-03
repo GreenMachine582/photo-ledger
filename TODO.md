@@ -7,7 +7,6 @@ nothing can change your files until M4.
 
 ## M0 Repo setup
 
-- [ ] Apply the `release tags` ruleset with `scripts/apply-rulesets.sh` (`main` is already applied)
 - [ ] Set the `RELEASE_APP_CLIENT_ID` variable and `RELEASE_APP_PRIVATE_KEY` secret, so release PRs trigger CI
 
 ## M1 Map and scan
