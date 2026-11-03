@@ -9,6 +9,7 @@ the filesystem can't commit together, so a journal entry is written before and a
 
 | Safeguard | Requirement |
 |---|---|
+| Dry run | Read-only. Checks that both ends are online, each file is unchanged (size and date, or its hash with `--verify`), no destination exists or is shared, and there's room on each volume a copy crosses to. A plan only applies after a clean one |
 | Before moving | The file must exist and match its expected BLAKE3 hash, or that action stops |
 | Destination | Never overwrite an existing file |
 | Same volume | Use an atomic rename where supported |

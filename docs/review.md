@@ -66,8 +66,12 @@ else. See [rescans.md](rescans.md).
 - **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
   mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).
 - **Collections** (`/collections`): Rename, merge or hide collections. See [collections.md](collections.md).
-- **Plan:** Every proposed move, its total size and a dry-run result, with an explicit confirm step. Bulk actions apply
-  to exact duplicates only, and always go through this page.
+- **Plan** (`/plan`): Every proposed move, its total size and a dry-run result, with an explicit confirm step. Copies
+  in sources without a quarantine are counted as staying where they are, and a copy whose picture would be left with
+  no kept copy is left alone. Viewing the page runs a quick dry run without recording it. **Rebuild plan** rebuilds the
+  plan from your decisions, and **Dry run with hashes** hashes every file. Both write only to the catalogue. Bulk
+  actions apply to exact duplicates only, and always go through this page. `photo-ledger plan` does the same from the
+  command line.
 
 ## Building it
 
