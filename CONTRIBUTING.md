@@ -8,7 +8,8 @@
 branch ──► commits ──► PR to main ──► checks pass ──► squash merge ──► release PR ──► tag vX.Y.Z
 ```
 
-- `main` is protected. Changes go through a PR, and every commit on it must be signed.
+- `main` is protected. Changes go through a PR, and every commit on it must be signed. Commit and push from Windows,
+  where the signing key is.
 - One change per PR. Code and the docs that describe it go in the same PR.
 - Update an open PR by adding commits, or by merging `main` into the branch. Never rebase and force-push.
 - There's no `dev` branch, as nothing else pins this project's releases.

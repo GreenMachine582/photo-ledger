@@ -1,15 +1,31 @@
 [← Back to README](../README.md)
 
-# 🔁 Scans and Rescans
+# 🔁 Sources, Scans and Rescans
+
+## Mapping sources
+
+Add a source in the UI or with `source add <path> --label <name>`. A source can be an internal disk, an external USB
+drive, a network folder or removable media. The same scanner handles all four.
+
+- **Device details:** The storage type, volume identifier, label, filesystem and capacity are recorded on a best-effort
+  basis. Nothing depends on knowing them in advance.
+- **Reconnecting:** If a drive letter or mount path changes, the app tries to recognise the volume and asks you to
+  confirm the new root.
+- **Offline sources:** A disconnected source shows as offline, and its files are never marked missing. Reviews use
+  cached thumbnails until it comes back.
+- **Overlaps:** A mapping nested inside another source is refused, because it would record every file twice.
 
 ## Saved scans
 
-A scan is a saved selection of one or more sources. Pause one at any point and start another with a subset of those
-sources, the same set or a different set. Work is saved to the shared catalogue, so a new scan reuses every file already
-hashed, as long as its size and `mtime_ns` still match. Only one scan can process a source at a time.
+A scan is a saved selection of one or more sources, such as `scan create "Old drives" --sources old-pc,usb-1`.
 
-A scan's review includes any pair with at least one file in its sources, including matches in other sources. Resolving a
-pair resolves it in every scan.
+- **Backing out:** Pause a scan at any point and start another with a subset of those sources, the same set or a
+  different set. You can resume the paused scan later.
+- **Progress:** Work is saved to the shared catalogue, not to the scan. A new scan reuses every file already hashed, as
+  long as its size and `mtime_ns` still match.
+- **Conflicts:** Only one scan can process a source at a time.
+- **Reviews:** A scan's review includes any pair with at least one file in its sources, including matches in other
+  sources. Resolving a pair resolves it in every scan.
 
 ## What a rescan does
 
