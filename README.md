@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M0.** The repo, app shell and health check are in place. Scanning arrives in M1. See [TODO.md](TODO.md).
+> **Status: M0 done.** The repo, app shell, health check and release automation are in place. Scanning arrives in M1. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 
@@ -29,6 +29,12 @@ untouched unless you opt in to quarantine for a source.
 | Review | One pair at a time, for a scan or all scans. Resolving a pair resolves it everywhere |
 | Changes | A reversible plan with a dry run, a journal and crash recovery |
 | Library | Folder names kept as collections, then exported as folders, XMP sidecars, CSV and JSON |
+
+**Not in the MVP:** HEIC, WebP, RAW and video, cloud sync, face or object recognition, photo editing and multi-user
+accounts.
+
+> [!WARNING]
+> Keep a separate copy of anything irreplaceable while testing. This tool shouldn't be your only safety net.
 
 ## 🚀 Quick start
 
@@ -50,7 +56,8 @@ The catalogue and thumbnails live in your OS application data folder, never in t
 | [docs/architecture.md](docs/architecture.md) | 🏗️ Components and the scan → review → apply flow |
 | [docs/data-model.md](docs/data-model.md) | 🗃️ Tables and what each one is for |
 | [docs/duplicate-detection.md](docs/duplicate-detection.md) | 🔍 Pipeline, pair kinds and keeper scores |
-| [docs/rescans.md](docs/rescans.md) | 🔁 Saved scans, and how decisions survive a rescan |
+| [docs/rescans.md](docs/rescans.md) | 🔁 Sources, saved scans, and how decisions survive a rescan |
+| [docs/review.md](docs/review.md) | 👀 The comparison screen, keys, sessions and other pages |
 | [docs/collections.md](docs/collections.md) | 🏷️ Folder names, tags and Immich |
 | [docs/safety.md](docs/safety.md) | 🛡️ File safety and local-only protections |
 | [docs/testing.md](docs/testing.md) | 🧪 Fixtures and test strategy |

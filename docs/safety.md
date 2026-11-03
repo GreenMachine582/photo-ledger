@@ -4,8 +4,8 @@
 
 ## File safety
 
-Only `actions/executor.py` may change a source folder, and undo goes through it too. SQLite and the filesystem can't commit
-together, so a journal entry is written before and after each operation.
+Only `actions/executor.py` may change a source folder, and undo goes through it too. Nothing is ever deleted. SQLite and
+the filesystem can't commit together, so a journal entry is written before and after each operation.
 
 | Safeguard | Requirement |
 |---|---|
@@ -13,12 +13,16 @@ together, so a journal entry is written before and after each operation.
 | Destination | Never overwrite an existing file |
 | Same volume | Use an atomic rename where supported |
 | Across volumes | Copy, verify the hash, then remove the original |
-| Quarantine | Off by default. Configured per source, on any device |
-| Interrupted plan | On next start, recovery finds unfinished actions and checks both paths |
+| Quarantine | Off by default. Configured per source, on any device, and suggested on the same volume because that's faster |
+| Interrupted plan | On next start, `recovery.py` finds unfinished actions and checks both paths before continuing or rolling back |
 | Undo | Verify the quarantined file, and never overwrite a file created since |
 
-By default, nothing leaves an original backup: approved keepers are copied into the destination library. A quarantine on
-another device makes reverts slower, not riskier. The device must be connected and have enough space, which the dry run checks.
+By default, nothing leaves an original backup: approved keepers are copied into the destination library. Moving rejected
+copies to quarantine is opt-in for each source, with its own path, which can be on another device.
+
+A quarantine on another device makes reverts slower, not riskier. Moves and undo both copy, verify the hash, then
+remove, so an interruption always leaves a verified copy to recover from. The quarantine device must be connected and
+have enough space, and the dry run checks both first. If the device is offline, undo names the device it needs.
 
 ## Local-only protections
 
