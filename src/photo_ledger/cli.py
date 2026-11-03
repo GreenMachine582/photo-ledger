@@ -1,4 +1,4 @@
-"""Command line entry point. Later milestones add match, plan, apply and undo."""
+"""Command line entry point: sources, scans, matching, reports, plans and exports."""
 
 import signal
 import sqlite3
@@ -12,6 +12,7 @@ import uvicorn
 
 from photo_ledger import __version__
 from photo_ledger import sources as source_service
+from photo_ledger.actions import dryrun, executor, planner, recovery
 from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
@@ -61,6 +62,8 @@ def version() -> None:
 def serve(port: int | None = typer.Option(None, help="Port on 127.0.0.1.")) -> None:
     """Run the review UI. It only ever binds to 127.0.0.1."""
     settings = Settings()
+    with catalogue() as conn:
+        _echo_recovery(recovery.recover(conn))
     uvicorn.run(
         "photo_ledger.web.app:create_app",
         factory=True,
@@ -135,6 +138,102 @@ def report(
             typer.echo("	".join("" if value is None else str(value) for value in row))
 
 
+# Plans --------------------------------------------------------------------------------------
+
+
+def _echo_dry_run(result: dryrun.DryRun) -> None:
+    if result.ok:
+        typer.echo("Dry run: no problems. Nothing has changed yet.")
+        return
+    typer.secho(f"Dry run found {len(result.problems)} problem(s):", fg=typer.colors.YELLOW)
+    for problem in result.problems:
+        typer.echo(f"  {problem.where}: {problem.message}")
+
+
+@app.command()
+def plan(
+    verify: bool = typer.Option(
+        False, "--verify", help="Hash every file instead of checking its size and date."
+    ),
+) -> None:
+    """Build a plan from your decisions and dry-run it. Changes nothing on disk."""
+    with catalogue() as conn:
+        summary = planner.build_plan(conn)
+        typer.echo(
+            f"Plan {summary.plan_id}: move {summary.moves} rejected copies "
+            f"({human_size(summary.move_bytes)}) to quarantine."
+        )
+        if summary.stay:
+            typer.echo(
+                f"{summary.stay} rejected copies ({human_size(summary.stay_bytes)}) stay where "
+                "they are, as their sources have no quarantine. "
+                "Turn it on with `photo-ledger source quarantine`."
+            )
+        for where in summary.unsafe:
+            typer.echo(f"  left alone, as no kept copy would remain: {where}")
+        if summary.moves:
+            result = dryrun.dry_run(conn, summary.plan_id, verify=verify)
+            _echo_dry_run(result)
+            if result.ok:
+                typer.echo("Apply it with `photo-ledger apply`.")
+
+
+def _echo_recovery(result: recovery.Recovery) -> None:
+    for plan_id in result.plans:
+        typer.secho(
+            f"Plan {plan_id} was interrupted. Checked: {result.pending} to retry, "
+            f"{result.done + result.finished} finished. Run `photo-ledger apply` to complete it.",
+            fg=typer.colors.YELLOW,
+        )
+    for message in result.failed:
+        typer.secho(f"  {message}", fg=typer.colors.RED)
+    for where in result.waiting:
+        typer.echo(f"  waiting for its drives to be connected: {where}")
+
+
+def _echo_applied(result: executor.ApplyResult, verb: str) -> None:
+    typer.echo(f"Plan {result.plan_id}: {result.done} {verb}, {len(result.failed)} failed.")
+    for message in result.failed:
+        typer.secho(f"  {message}", fg=typer.colors.RED)
+    if result.status != "applied":
+        typer.echo("The plan is incomplete. Fix the problems above and run the command again.")
+        raise typer.Exit(1)
+
+
+@app.command()
+def apply(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Move rejected copies to quarantine, as planned and dry-run. Nothing is deleted."""
+    with catalogue() as conn:
+        _echo_recovery(recovery.recover(conn))
+        current = planner.draft(conn)
+        if current is not None and not yes:
+            result = dryrun.dry_run(conn, current["id"])
+            _echo_dry_run(result)
+            if not result.ok:
+                raise typer.Exit(1)
+            typer.confirm(
+                f"Move {result.actions} files ({human_size(result.bytes)}) to quarantine?",
+                abort=True,
+            )
+        _echo_applied(executor.apply(conn), "moved")
+        typer.echo("Undo it with `photo-ledger undo`.")
+
+
+@app.command()
+def undo(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Put back every file the most recent applied plan moved. Never overwrites a file."""
+    with catalogue() as conn:
+        if not yes:
+            typer.confirm(
+                "Move the most recent plan's files back where they came from?", abort=True
+            )
+        _echo_applied(executor.undo(conn), "restored")
+
+
 # Sources ------------------------------------------------------------------------------------
 
 
@@ -169,8 +268,35 @@ def source_list() -> None:
         for row in rows:
             state = "online" if source_service.refresh_state(conn, row) else "offline"
             volume = row["device_label"] or row["volume_id"] or ""
+            quarantine = f"quarantine {row['quarantine_path']}" if row["quarantine_enabled"] else ""
             typer.echo(
                 f"{row['label']}\t{state}\t{row['source_type']}\t{row['root_path']}\t{volume}"
+                + (f"\t{quarantine}" if quarantine else "")
+            )
+
+
+@source_app.command("quarantine")
+def source_quarantine(
+    label: str = typer.Argument(..., help="The source whose rejected copies may move."),
+    path: Path | None = typer.Argument(
+        None, help="An existing folder outside every source, on any device."
+    ),
+    off: bool = typer.Option(False, "--off", help="Turn quarantine off for this source."),
+) -> None:
+    """Opt a source in to moving rejected copies into a quarantine folder. Off by default."""
+    if off == (path is not None):
+        typer.secho("Pass either a quarantine folder or --off.", err=True)
+        raise typer.Exit(2)
+    with catalogue() as conn:
+        source, same_volume = source_service.set_quarantine(conn, label, None if off else path)
+        if off:
+            typer.echo(f"Quarantine is off for '{label}'. Its rejected copies stay where they are.")
+            return
+        typer.echo(f"Rejected copies in '{label}' can move to {source['quarantine_path']}.")
+        if same_volume is False:
+            typer.echo(
+                "It's on another device, so moves copy and verify each file. A folder on the "
+                "source's own drive would be faster."
             )
 
 

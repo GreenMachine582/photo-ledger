@@ -48,6 +48,11 @@ def _refuse_overlap(conn: sqlite3.Connection, root: Path, *, ignore_id: int | No
                 f"{root} overlaps source '{other['label']}' at {other['root_path']}. "
                 "Nested sources would record every file twice."
             )
+        if other["quarantine_path"] and overlaps(root, other["quarantine_path"]):
+            raise SourceError(
+                f"{root} overlaps the quarantine for '{other['label']}' at "
+                f"{other['quarantine_path']}. Scanning it would catalogue quarantined copies."
+            )
 
 
 def list_sources(conn: sqlite3.Connection) -> list[sqlite3.Row]:
@@ -134,6 +139,55 @@ def reconnect(conn: sqlite3.Connection, label: str, new_root: Path | str) -> sql
     with conn:
         queries.update_root(conn, source["id"], root_path=str(root), device=details)
     return queries.by_id(conn, source["id"])
+
+
+def set_quarantine(
+    conn: sqlite3.Connection, label: str, path: Path | str | None
+) -> tuple[sqlite3.Row, bool | None]:
+    """Turn quarantine on for a source at an existing folder, or off with ``None``.
+
+    Returns the updated source and whether the quarantine shares the source's volume (``None``
+    when either volume is unknown). The folder must already exist: this creates nothing, and
+    only the executor ever writes into it.
+    """
+    source = get_source(conn, label)
+    if path is None:
+        with conn:
+            queries.set_quarantine(conn, source["id"], path=None, volume_id=None)
+        return queries.by_id(conn, source["id"]), None
+    root = _resolve_root(path)
+    for other in queries.all_sources(conn):
+        if overlaps(root, other["root_path"]):
+            raise SourceError(
+                f"{root} overlaps source '{other['label']}' at {other['root_path']}. "
+                "A quarantine must sit outside every source, or a rescan would catalogue it."
+            )
+    volume_id = device.describe(root).volume_id
+    with conn:
+        queries.set_quarantine(conn, source["id"], path=str(root), volume_id=volume_id)
+    same = None if not (volume_id and source["volume_id"]) else volume_id == source["volume_id"]
+    return queries.by_id(conn, source["id"]), same
+
+
+def quarantine_online(source: sqlite3.Row) -> bool:
+    """The source's quarantine folder is reachable and, where known, on the volume it was set on."""
+    if not source["quarantine_enabled"] or not source["quarantine_path"]:
+        return False
+    root = Path(source["quarantine_path"])
+    if not root.is_dir():
+        return False
+    if source["quarantine_volume_id"]:
+        current = device.describe(root).volume_id
+        if current and current != source["quarantine_volume_id"]:
+            return False
+    return True
+
+
+def quarantine_device(source: sqlite3.Row) -> str:
+    """How to name the quarantine's device when asking for it to be connected."""
+    path = source["quarantine_path"] or "an unset path"
+    volume = source["quarantine_volume_id"]
+    return f"volume {volume} ({path})" if volume else path
 
 
 def set_priority(conn: sqlite3.Connection, label: str, priority: int) -> sqlite3.Row:

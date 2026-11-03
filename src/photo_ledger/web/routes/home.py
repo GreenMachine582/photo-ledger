@@ -19,7 +19,11 @@ def home(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLRe
         {"label": "Files", "value": f"{data.files:,}"},
         {"label": "Unique photos", "value": f"{data.contents:,}"},
         {"label": "Duplicated space", "value": human_size(data.reclaimable_bytes)},
-        {"label": "Marked for the plan", "value": human_size(data.marked_bytes)},
+        {
+            "label": "Marked for the plan",
+            "value": human_size(data.marked_bytes),
+            "delta": '<a href="/plan">See the plan</a>',
+        },
         {"label": "Open pairs", "value": f"{data.pairs.get('open', 0):,}"},
         {"label": "Skipped", "value": f"{data.pairs.get('skipped', 0):,}"},
         {"label": "Needs review", "value": f"{data.pairs.get('needs_review', 0):,}"},

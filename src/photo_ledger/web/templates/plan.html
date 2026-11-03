@@ -1,0 +1,77 @@
+{% extends "page.html" %}
+{% from "stat_card.html" import gth_stat_grid %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "form.html" import gth_csrf_field %}
+{% from "toast.html" import gth_alert %}
+{% from "empty_state.html" import gth_empty_state %}
+{% from "modal.html" import gth_modal %}
+{% set page_title = "Plan" %}
+{% set page_subtitle = "What your decisions would move, checked by a dry run. Nothing moves until you apply it, and nothing is ever deleted." %}
+
+{% block page %}
+{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
+{% if unfinished %}{{ gth_alert("Plan " ~ unfinished.id ~ " didn't finish. Run `photo-ledger apply` to finish it, or `photo-ledger undo` to put its files back.", kind="warning") }}{% endif %}
+{% if last_applied %}<p class="text-body-secondary">Plan {{ last_applied.id }} was applied. Undo it from the command line with <code>photo-ledger undo</code>.</p>{% endif %}
+{% if stale %}{{ gth_alert("You've made decisions since this plan was built. Rebuild it before applying.", kind="warning") }}{% endif %}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <form method="post" action="/plan">
+    {{ gth_csrf_field(csrf_token|default(none)) }}
+    <button type="submit" class="btn btn-primary">{{ "Rebuild plan" if plan else "Build plan" }}</button>
+  </form>
+  {% if plan %}
+  <form method="post" action="/plan/check">
+    {{ gth_csrf_field(csrf_token|default(none)) }}
+    <button type="submit" class="btn btn-outline-secondary">Dry run with hashes</button>
+  </form>
+  {% if can_apply %}
+  <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#apply-plan">Apply plan</button>
+  {% endif %}
+  {% endif %}
+</div>
+
+{% if can_apply %}
+{% call gth_modal("apply-plan", title="Apply this plan?", static_backdrop=True) %}
+<p>{{ actions|length }} rejected copies move to quarantine. Each is verified by its hash before it moves, nothing is overwritten and nothing is deleted. Undo puts them back with <code>photo-ledger undo</code>.</p>
+<form method="post" action="/plan/apply" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Apply</button>
+</form>
+{% endcall %}
+{% endif %}
+
+{% if stay %}
+<p class="text-body-secondary">{{ stay }} rejected copies ({{ stay_size }}) stay where they are, as their sources have no quarantine. Turn it on with <code>photo-ledger source quarantine &lt;label&gt; &lt;folder&gt;</code>.</p>
+{% endif %}
+{% if unsafe %}
+<p class="text-body-secondary">Left alone, as no kept copy of the picture would remain: {{ unsafe|join(", ") }}.</p>
+{% endif %}
+
+{% if not plan %}
+{{ gth_empty_state("No plan yet. Build one from your decisions: it only writes to the catalogue.") }}
+{% else %}
+{{ gth_stat_grid(cards, cols=4) }}
+
+{% if dry_run and dry_run.problems %}
+<h2 class="h5 mt-4">Dry-run problems</h2>
+{% call gth_table(["Where", "Problem"]) %}
+  {% call(row) gth_table_body(dry_run.problems, colspan=2) %}
+  <tr><td class="text-break">{{ row.where }}</td><td>{{ row.message }}</td></tr>
+  {% endcall %}
+{% endcall %}
+{% endif %}
+
+<h2 class="h5 mt-4">Moves</h2>
+{% call gth_table(["Source", "File", "To", "Size"]) %}
+  {% call(row) gth_table_body(actions, empty_message="Nothing to move.", colspan=4) %}
+  <tr>
+    <td>{{ row.source }}</td>
+    <td class="text-break">{{ row.path }}</td>
+    <td class="text-break">{{ row.to }}</td>
+    <td>{{ row.size }}</td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

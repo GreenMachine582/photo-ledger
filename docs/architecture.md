@@ -18,7 +18,7 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `review/` | Decisions, review sessions and what the comparison view shows | M3 |
 | `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
-| `actions/` | Planner, executor, undo and recovery | M4 |
+| `actions/` | Planner, dry run, executor, undo and recovery. Only `executor.py` writes to sources | M4 |
 | `exports/` | CSV, JSON, XMP sidecars and the optional Immich export | M1, M5, M6 |
 
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers

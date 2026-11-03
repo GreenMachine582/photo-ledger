@@ -10,7 +10,8 @@ def test_version():
     assert __version__ in result.stdout
 
 
-def test_serve_binds_only_to_loopback(monkeypatch):
+def test_serve_binds_only_to_loopback(tmp_path, monkeypatch):
+    monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(tmp_path))  # serve recovers plans first
     calls = {}
     monkeypatch.setattr(cli.uvicorn, "run", lambda *args, **kwargs: calls.update(kwargs))
     result = CliRunner().invoke(cli.app, ["serve", "--port", "9000"])
@@ -46,6 +47,17 @@ def test_source_commands(tmp_path, monkeypatch):
     moved = runner.invoke(cli.app, ["source", "reconnect", "pc", str(tmp_path / "moved"), "--yes"])
     assert moved.exit_code == 0, moved.output
     assert "pc\tonline" in runner.invoke(cli.app, ["source", "list"]).stdout
+
+    (tmp_path / "q").mkdir()
+    quarantined = runner.invoke(cli.app, ["source", "quarantine", "pc", str(tmp_path / "q")])
+    assert quarantined.exit_code == 0, quarantined.output
+    assert "can move to" in quarantined.stdout
+    assert "quarantine" in runner.invoke(cli.app, ["source", "list"]).stdout
+    both = runner.invoke(cli.app, ["source", "quarantine", "pc", str(tmp_path / "q"), "--off"])
+    assert both.exit_code == 2
+    off = runner.invoke(cli.app, ["source", "quarantine", "pc", "--off"])
+    assert off.exit_code == 0, off.output
+    assert "quarantine" not in runner.invoke(cli.app, ["source", "list"]).stdout
 
 
 def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
