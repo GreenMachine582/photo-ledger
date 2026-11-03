@@ -16,6 +16,7 @@ from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.exports import csv_export
+from photo_ledger.matching import pairs as pair_matching
 from photo_ledger.scanner import engine
 
 app = typer.Typer(help="Catalogue photo backups, find duplicates and organise them safely.")
@@ -63,6 +64,31 @@ def serve(port: int | None = typer.Option(None, help="Port on 127.0.0.1.")) -> N
         host=LOCAL_HOSTS[0],
         port=port or settings.photo_ledger_port,
     )
+
+
+@app.command()
+def match(
+    threshold: int | None = typer.Option(
+        None,
+        "--threshold",
+        "-t",
+        min=0,
+        max=32,
+        help="Largest pHash distance that counts as similar.",
+    ),
+) -> None:
+    """Find exact duplicates, similar images and name conflicts. Only reads the catalogue."""
+    limit = Settings().photo_ledger_similar_threshold if threshold is None else threshold
+    with catalogue() as conn:
+        result = pair_matching.match(conn, limit)
+        found = ", ".join(
+            f"{n} {kind.replace('_', ' ')}" for kind, n in sorted(result.by_kind.items())
+        )
+        typer.echo(f"Matched with a similarity threshold of {limit}: {found or 'no pairs'}.")
+        typer.echo(
+            f"{result.new} new, {result.reopened} reopened, {result.needs_review} need review, "
+            f"{result.obsolete} closed, {result.unchanged} unchanged."
+        )
 
 
 # Sources ------------------------------------------------------------------------------------
@@ -199,6 +225,8 @@ def scan_run(
                 "Reconnect them and run the scan again."
             )
         typer.echo(f"Scan '{result.name}' is {result.status}.")
+        if result.status == "complete":
+            typer.echo("Run `photo-ledger match` to find duplicates and similar images.")
 
 
 @scan_app.command("list")

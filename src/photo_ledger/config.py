@@ -22,6 +22,8 @@ class Settings(GTHBaseSettings):
     secret_key: str = Field(default_factory=lambda: secrets.token_hex(32))
     photo_ledger_data_dir: Path = Field(default_factory=_default_data_dir)
     photo_ledger_port: int = 8765
+    #: Largest pHash Hamming distance, out of 64 bits, that counts as a similar image.
+    photo_ledger_similar_threshold: int = Field(default=8, ge=0, le=32)
 
     @property
     def db_path(self) -> Path:

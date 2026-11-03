@@ -88,6 +88,12 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     inside = runner.invoke(cli.app, ["export", "csv", str(root / "camera" / "out.csv")])
     assert inside.exit_code == 1
 
+    matched = runner.invoke(cli.app, ["match"])
+    assert matched.exit_code == 0, matched.output
+    assert "threshold of 8: 5 exact, 1 name conflict, 2 similar." in matched.stdout
+    assert "8 new" in matched.stdout
+    assert "0 new" in runner.invoke(cli.app, ["match", "--threshold", "8"]).stdout
+
     missing = runner.invoke(cli.app, ["scan", "run", "nope"])
     assert missing.exit_code == 1
     assert "no scan called 'nope'" in missing.output

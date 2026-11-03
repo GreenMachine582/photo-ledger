@@ -11,7 +11,9 @@ Only JPEG and PNG are fully processed in the MVP. Other files are counted as uns
    group by BLAKE3.
 3. **Enrich:** Decode each new content once, reading EXIF and computing pHash. Failures go to `scan_errors`.
 4. **Similar:** Pair images within a Hamming distance threshold, starting at 8 of 64 bits and tuned on real samples.
-   Dimensions and capture time are used as supporting evidence.
+   Set `PHOTO_LEDGER_SIMILAR_THRESHOLD`, or pass `match --threshold`. The search splits each hash into threshold + 1
+   chunks: two hashes that close must share one chunk exactly, so only hashes sharing a chunk are compared, never
+   every pair. Dimensions and capture time are used as supporting evidence.
 5. **Mismatch:** Run the name, date and single-source checks below.
 6. **Score:** Suggest a keeper and store the reasons.
 
@@ -23,6 +25,17 @@ Only JPEG and PNG are fully processed in the MVP. Other files are counted as uns
 | `similar` | Two different contents | The two BLAKE3 hashes |
 | `name_conflict` | Same filename, different content | The two BLAKE3 hashes |
 
+`photo-ledger match` recomputes the pairs from the catalogue and reconciles them with the stored ones by key:
+
+| Found | Result |
+|---|---|
+| A new key | Queued as `open` |
+| A known key | Kept as it is, so rescanning the same files queues nothing |
+| An `obsolete` key matching again | Back to `open` |
+| A `resolved` exact pair whose files changed content | `needs_review` |
+| A stored key that no longer matches, such as a copy gone missing | `obsolete`, unless it was resolved |
+
+Only `present` and `corrupt` files take part. Files on an offline source stay `present`, so their pairs are untouched.
 Keys sort their two members, so swapping left and right can't create a second pair. Rejecting a copy closes its other
 open pairs, so N copies take N − 1 reviews. Rejecting a similar image's content applies to all its copies, and the plan
 lists each of them.
