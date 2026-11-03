@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M0.** The repo, app shell and health check are in place. Scanning arrives in M1. See [TODO.md](TODO.md).
+> **Status: M0 done.** The repo, app shell, health check and release automation are in place. Scanning arrives in M1. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 

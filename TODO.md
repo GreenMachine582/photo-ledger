@@ -5,10 +5,6 @@
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
 nothing can change your files until M4.
 
-## M0 Repo setup
-
-- [ ] Set the `RELEASE_APP_CLIENT_ID` variable and `RELEASE_APP_PRIVATE_KEY` secret, so release PRs trigger CI
-
 ## M1 Map and scan
 
 Done when a paused scan resumes, a new overlapping scan reuses its hashes, changed files reconcile, an offline source
