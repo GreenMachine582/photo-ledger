@@ -5,14 +5,6 @@
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
 nothing can change your files until M4.
 
-## M1 Map and scan
-
-Done when a paused scan resumes, a new overlapping scan reuses its hashes, changed files reconcile, an offline source
-marks nothing missing, and source files are unchanged. Build it against generated fixtures before pointing it at a real
-backup, and keep a separate copy of anything irreplaceable.
-
-- [ ] `scan --verify` and CSV export
-
 ## M2 Detect
 
 Done when a read-only report matches a hand-checked sample, and rescanning the same files creates no new pairs.

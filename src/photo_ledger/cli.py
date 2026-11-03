@@ -15,13 +15,16 @@ from photo_ledger import sources as source_service
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
+from photo_ledger.exports import csv_export
 from photo_ledger.scanner import engine
 
 app = typer.Typer(help="Catalogue photo backups, find duplicates and organise them safely.")
 source_app = typer.Typer(help="Map folders and drives to scan. Mapping never changes them.")
 scan_app = typer.Typer(help="Saved scans of one or more sources. Scanning only reads files.")
 app.add_typer(source_app, name="source")
+export_app = typer.Typer(help="Export the catalogue. Exports never write to a source.")
 app.add_typer(scan_app, name="scan")
+app.add_typer(export_app, name="export")
 
 
 @app.callback()
@@ -232,3 +235,17 @@ def scan_status(name: str = typer.Argument(..., help="The scan to show.")) -> No
                 typer.echo(
                     f"  {error['label']}/{error['rel_path']} ({error['stage']}): {error['message']}"
                 )
+
+
+# Exports ------------------------------------------------------------------------------------
+
+
+@export_app.command("csv")
+def export_csv(
+    out: Path = typer.Argument(..., help="The CSV file to write, outside every source."),
+    scan: str | None = typer.Option(None, "--scan", help="Only the sources in this scan."),
+) -> None:
+    """Write one row per catalogued file, with its hash, dates and image details."""
+    with catalogue() as conn:
+        count = csv_export.export_files(conn, out, scan_name=scan)
+        typer.echo(f"Wrote {count} files to {out}")

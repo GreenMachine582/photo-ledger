@@ -77,6 +77,12 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     assert verified.exit_code == 0, verified.output
     assert "camera: complete. 5 listed, 0 unchanged, 4 hashed (0 new)" in verified.stdout
 
+    exported = runner.invoke(cli.app, ["export", "csv", str(tmp_path / "out.csv")])
+    assert exported.exit_code == 0, exported.output
+    assert "Wrote 12 files" in exported.stdout
+    inside = runner.invoke(cli.app, ["export", "csv", str(root / "camera" / "out.csv")])
+    assert inside.exit_code == 1
+
     missing = runner.invoke(cli.app, ["scan", "run", "nope"])
     assert missing.exit_code == 1
     assert "no scan called 'nope'" in missing.output
