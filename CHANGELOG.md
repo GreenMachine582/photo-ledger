@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.3.0...v0.4.0) (2026-11-03)
+
+
+### Features
+
+* review pairs side by side in the browser (M3) ([#9](https://github.com/GreenMachine582/photo-ledger/issues/9)) ([1ba4796](https://github.com/GreenMachine582/photo-ledger/commit/1ba4796953a54f0c2bdc352fb7b751baf80a3b66))
+
 ## [0.3.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.2.0...v0.3.0) (2026-11-03)
 
 
