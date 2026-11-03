@@ -17,7 +17,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from photo_ledger import __version__
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.errors import PhotoLedgerError
-from photo_ledger.web.routes import collections, files, home, plan, reports, review
+from photo_ledger.web.routes import collections, files, home, plan, reports, review, sources
 from photo_ledger.web.security import LocalOriginMiddleware
 
 WEB_DIR = Path(__file__).parent
@@ -35,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         nav_items=build_nav_items(
             custom_items=[
                 {"label": "Overview", "url": "/"},
+                {"label": "Sources", "url": "/sources"},
                 {"label": "Review", "url": "/review"},
                 {"label": "Collections", "url": "/collections"},
                 {"label": "Reports", "url": "/reports"},
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(collections.router)
     app.include_router(reports.router)
     app.include_router(plan.router)
+    app.include_router(sources.router)
 
     @app.exception_handler(PhotoLedgerError)
     async def expected_failure(request: Request, exc: PhotoLedgerError):

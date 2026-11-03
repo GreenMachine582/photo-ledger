@@ -8,11 +8,11 @@
 
 {% block page %}
 {% if not data.sources %}
-{{ gth_empty_state("No sources mapped yet. Map one with `photo-ledger source add <path> --label <name>`, then scan it.") }}
+{% call gth_empty_state("No sources mapped yet. Map one on the Sources page, or with `photo-ledger source add <path> --label <name>`, then scan it.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
 {% else %}
 {{ gth_stat_grid(cards, cols=4) }}
 
-<h2 class="h5 mt-4">Sources</h2>
+<h2 class="h5 mt-4">Sources <a class="small fw-normal ms-2" href="/sources">Manage</a></h2>
 {% call gth_table(["Source", "State", "Type", "Files", "Last scan", "Root"]) %}
   {% call(row) gth_table_body(data.sources, colspan=6) %}
   <tr>
