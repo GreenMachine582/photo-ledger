@@ -64,6 +64,18 @@ def set_state(
     )
 
 
+def set_sidecar(conn: sqlite3.Connection, entry_id: int, sidecar_blake3: str) -> None:
+    conn.execute(
+        "UPDATE library_entries SET sidecar_blake3 = ? WHERE id = ?", (sidecar_blake3, entry_id)
+    )
+
+
+def set_applied_date(conn: sqlite3.Connection, entry_id: int, applied_date: str | None) -> None:
+    conn.execute(
+        "UPDATE library_entries SET applied_date = ? WHERE id = ?", (applied_date, entry_id)
+    )
+
+
 def forget_unbuilt(conn: sqlite3.Connection) -> None:
     """Drop entries with no file in the library yet, so the next plan picks them afresh."""
     conn.execute("DELETE FROM library_entries WHERE state IN ('pending', 'failed')")

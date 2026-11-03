@@ -20,6 +20,7 @@ from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.exports import csv_export, guard
 from photo_ledger.formatting import human_size
+from photo_ledger.library import dates as library_dates
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
 from photo_ledger.matching import pairs as pair_matching
@@ -35,6 +36,8 @@ app.add_typer(scan_app, name="scan")
 app.add_typer(export_app, name="export")
 library_app = typer.Typer(help="Build a clean library from settled pictures. Originals stay put.")
 app.add_typer(library_app, name="library")
+date_app = typer.Typer(help="Capture dates you set by hand. Originals are never changed.")
+app.add_typer(date_app, name="date")
 
 
 @app.callback()
@@ -307,21 +310,52 @@ def library_build(
         summary = library_plan.plan_library(conn)
         _echo_library_plan(summary)
         pending = sum(library_queries.counts(conn).get(s, 0) for s in ("pending", "failed"))
-        if not pending:
-            typer.echo("Nothing to copy.")
-            return
-        checked = _library_dry_run(conn)
-        _echo_dry_run(checked)
-        if not checked.ok:
-            raise typer.Exit(1)
-        if not yes:
-            typer.confirm(f"Copy {pending} pictures into the library?", abort=True)
+        if pending:
+            checked = _library_dry_run(conn)
+            _echo_dry_run(checked)
+            if not checked.ok:
+                raise typer.Exit(1)
+            if not yes:
+                typer.confirm(f"Copy {pending} pictures into the library?", abort=True)
+        else:
+            typer.echo("Nothing new to copy. Checking sidecars and dates.")
         result = executor.build_library(conn)
-        typer.echo(f"Copied {result.copied} pictures, {len(result.failed)} failed.")
+        typer.echo(
+            f"Copied {result.copied} pictures, {len(result.failed)} failed. "
+            f"Wrote {result.sidecars} sidecars and set {result.dates} file dates."
+        )
+        for path in result.kept_sidecars:
+            typer.echo(f"  left alone, as it was edited or written elsewhere: {path}")
         for message in result.failed:
             typer.secho(f"  {message}", fg=typer.colors.RED)
         if result.status != "complete":
             raise typer.Exit(1)
+
+
+@date_app.command("set")
+def date_set(
+    where: str = typer.Argument(..., help="The photo, as <source label>/<path in the source>."),
+    value: str = typer.Argument(..., help="YYYY-MM-DD, or YYYY-MM-DDTHH:MM[:SS]."),
+) -> None:
+    """Give an undated or misdated photo its capture date. Never changes the original."""
+    with catalogue() as conn:
+        taken = library_dates.set_date(conn, where, value)
+        typer.echo(
+            f"{where} was taken {taken}, for every copy. `photo-ledger library build` applies it "
+            "to the library copy and its sidecar."
+        )
+
+
+@date_app.command("clear")
+def date_clear(
+    where: str = typer.Argument(..., help="The photo, as <source label>/<path in the source>."),
+) -> None:
+    """Forget a date you set, going back to the photo's EXIF date, or none."""
+    with catalogue() as conn:
+        if library_dates.clear_date(conn, where):
+            typer.echo(f"Forgot the date you set for {where}.")
+        else:
+            typer.echo(f"{where} had no date set by hand.")
 
 
 # Sources ------------------------------------------------------------------------------------

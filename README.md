@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M4 done.** Scan from the CLI, then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Decisions build a plan that's dry-run, then applied with a journal, crash recovery and undo, moving rejected copies into an opt-in quarantine. Building a clean library arrives in M5. See [TODO.md](TODO.md).
+> **Status: M5 done.** Manage sources in the browser and scan from the CLI. Then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Decisions build a plan that's dry-run, then applied with a journal, crash recovery and undo, moving rejected copies into an opt-in quarantine. Settled pictures are copied into a clean library by year or original path, with XMP sidecars that keep every collection, and with capture dates from EXIF or set by you. Immich export arrives in M6. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 
@@ -66,6 +66,17 @@ photo-ledger plan --verify    # build the plan from your decisions and dry-run i
 photo-ledger apply            # move the rejected copies, verified by hash, after you confirm
 photo-ledger undo             # put them back
 ```
+
+Then build a clean library from the settled pictures. It only copies, so originals are never changed:
+
+```bash
+photo-ledger library set /media/library --layout year   # or --layout original
+photo-ledger date set usb-1/Screenshots/shot_01.png 2020-02-03   # date a photo with no EXIF
+photo-ledger library plan     # preview and dry-run the build
+photo-ledger library build    # copy, verified by hash, with an XMP sidecar beside each file
+```
+
+Sources can also be mapped, checked and reconnected on the Sources page at <http://127.0.0.1:8765/sources>.
 
 To try it without real photos, `python scripts/make_fixtures.py <empty-folder>` generates a test tree.
 

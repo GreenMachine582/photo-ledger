@@ -51,15 +51,36 @@ by its hash. Originals are never changed.
 - **Rebuilding:** Only adds. Files already copied keep their place. A picture rejected since stays where it is and
   is reported. A layout can't change once files are copied, so a new layout needs a new folder.
 
+## Dates
+
+A picture's capture date is the one you set with `photo-ledger date set <source label>/<path> <YYYY-MM-DD[THH:MM[:SS]]>`,
+or else its EXIF date. A file's modified time never counts, as it may only be the day the file was restored.
+
+- **Dates you set** belong to the picture, so every copy shares them, and no rescan overwrites them. `date clear`
+  forgets one.
+- **The library copy's file date** is set to the capture date, using its EXIF offset when there is one and local
+  time otherwise. A restored photo stops showing its restore date. Without a capture date, the copy keeps the
+  original's file date.
+- **Originals are never changed.** A date you set reaches only the library copy's file date and its sidecar on the
+  next `library build`. A file already copied into `Undated/` stays there, because copies never move.
+
 ## Tagging for Immich
 
-Write `IMG_0412.jpg.xmp` beside each library file, with hierarchical tags in `digiKam:TagsList`, which Immich reads first:
+`library build` writes `IMG_0412.jpg.xmp` beside each library file, with hierarchical tags in `digiKam:TagsList`,
+which Immich reads first:
 
-- `Collections/Holidays/2019/Japan`
-- `Sources/Old PC`
+- `Collections/Holidays/2019/Japan`, for every visible collection the picture belongs to through any copy, including
+  the copies it replaced
+- `Sources/Old PC`, for every source that holds a copy
+- the photo's own keywords, from IPTC and XMP `dc:subject`
 
-Immich uses the first tag field it finds and doesn't merge them, and sidecars take priority over embedded tags. Copy any
-existing embedded keywords into the sidecar, or they'll stop showing.
+Immich uses the first tag field it finds and doesn't merge them, and sidecars take priority over embedded tags. That's
+why the photo's own keywords are copied in, or they'd stop showing. `dc:subject` repeats the collection names and
+keywords as flat keywords, and `exif:DateTimeOriginal` holds the capture date.
+
+Sidecars follow the catalogue. Renaming, merging or hiding a collection, or setting a date, updates them on the next
+build. A sidecar is only replaced while it's still the one the build wrote, so one you've edited, or one another app
+wrote, is left alone and reported.
 
 ## Getting photos into Immich
 

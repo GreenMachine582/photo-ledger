@@ -13,6 +13,7 @@ from photo_ledger.actions import paths
 from photo_ledger.actions.dryrun import Problem, free_bytes
 from photo_ledger.db import library as queries
 from photo_ledger.library import selection
+from photo_ledger.library.dates import capture_dates
 from photo_ledger.library.layout import Layout, unique
 from photo_ledger.library.settings import get_library, library_name, library_online
 from photo_ledger.sources.service import is_online
@@ -30,15 +31,11 @@ class LibraryPlan:
     no_longer_chosen: list[str] = field(default_factory=list)
 
 
-def capture_date(row: sqlite3.Row) -> str | None:
-    """The date a picture was taken, from EXIF. File dates never count: they may be restores."""
-    return row["captured_at"]
-
-
 def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
     library = get_library(conn)
     picked = selection.settled_pictures(conn)
     layout = Layout(conn, library["layout"])
+    dates = capture_dates(conn)
     result = LibraryPlan(
         waiting=len(picked.waiting), rejected=picked.rejected, corrupt=picked.corrupt
     )
@@ -50,7 +47,7 @@ def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
             if content_id not in picked.chosen:
                 result.no_longer_chosen.append(row["rel_path"])
         new = [
-            (layout.path_for(chosen, capture_date(chosen)), content_id, chosen)
+            (layout.path_for(chosen, _taken(dates, content_id)), content_id, chosen)
             for content_id, chosen in picked.chosen.items()
             if content_id not in kept
         ]
@@ -68,6 +65,11 @@ def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
             result.to_copy_bytes += chosen["size_bytes"]
         result.already = sum(1 for row in kept.values() if row["state"] == "done")
     return result
+
+
+def _taken(dates: dict, content_id: int) -> str | None:
+    date = dates.get(content_id)
+    return date.taken if date else None
 
 
 def endpoints(library: sqlite3.Row, entry: sqlite3.Row) -> tuple[Path, Path]:

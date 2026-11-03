@@ -1,9 +1,12 @@
 """The destination library, checked against M5's "done when": a clean library builds from
 approved keepers, with originals untouched by default and collections intact."""
 
+import io
 import subprocess
 import sys
+from datetime import UTC, datetime
 
+import make_fixtures
 import pytest
 from plan_helpers import A_CAMERA, reject_backup_copy, reject_two_of_three
 from review_helpers import exact_pair
@@ -12,10 +15,14 @@ from typer.testing import CliRunner
 
 from photo_ledger import cli, sources
 from photo_ledger.actions import executor, recovery
+from photo_ledger.collections import editing
+from photo_ledger.collections.folders import collection_paths, refresh_collections
 from photo_ledger.db import library as queries
-from photo_ledger.library import LibraryError, plan, selection, settings
+from photo_ledger.library import LibraryError, dates, plan, selection, settings
 from photo_ledger.library.layout import unique
+from photo_ledger.matching.pairs import match
 from photo_ledger.review.decisions import decide
+from photo_ledger.scanner.engine import create_scan, run_scan
 
 #: The settled fixture pictures, with their library path and the copy they come from, checked
 #: by hand against make_fixtures: a restore-dated photo files under its EXIF year, pictures
@@ -60,7 +67,12 @@ def build(conn):
 
 
 def library_files(folder):
-    return {path: values for path, values in snapshot(folder).items()}
+    """The photos in the library, without their sidecars."""
+    return {path: values for path, values in snapshot(folder).items() if not path.endswith(".xmp")}
+
+
+def sidecar_text(folder, path):
+    return (folder / f"{path}.xmp").read_text(encoding="utf-8")
 
 
 # Done when ---------------------------------------------------------------------------------
@@ -303,7 +315,9 @@ def test_cli_sets_plans_and_builds(library, settings, monkeypatch):
     assert "Copied 8 pictures, 0 failed" in built.stdout
     status = runner.invoke(cli.app, ["library", "status"])
     assert "8 done" in status.stdout
-    assert "Nothing to copy" in runner.invoke(cli.app, ["library", "build", "--yes"]).stdout
+    again = runner.invoke(cli.app, ["library", "build", "--yes"]).stdout
+    assert "Nothing new to copy" in again
+    assert "Wrote 0 sidecars and set 0 file dates" in again
 
 
 def test_library_never_imports_fastapi():
@@ -313,3 +327,149 @@ def test_library_never_imports_fastapi():
         "sys.exit('fastapi' in sys.modules)"
     )
     assert subprocess.run([sys.executable, "-c", code], check=False).returncode == 0
+
+
+# Collections, sidecars and dates --------------------------------------------------------------
+
+F_LIBRARY = "2019/Best of 2019/IMG_0412.jpg"
+PNG_LIBRARY = "Undated/screenshots/shot_01.png"
+
+
+def built_library(library):
+    conn, root, folder = library
+    settle_everything(conn)
+    settings.set_library(conn, folder)
+    build(conn)
+    return conn, root, folder
+
+
+def test_every_library_file_gets_a_sidecar_with_inherited_collections(library):
+    conn, _, folder = built_library(library)
+    assert all((folder / f"{path}.xmp").is_file() for path in YEAR_LAYOUT)
+    # The camera copy of IMG_0412 replaced two backup copies and keeps both their collections.
+    text = sidecar_text(folder, F_LIBRARY)
+    for tag in (
+        "Collections/Best of 2019",
+        "Collections/Holidays/2019/Japan",
+        "Sources/backup",
+        "Sources/camera",
+    ):
+        assert f"<rdf:li>{tag}</rdf:li>" in text
+    assert 'exif:DateTimeOriginal="' not in sidecar_text(folder, PNG_LIBRARY)
+
+
+def test_renamed_and_hidden_collections_reach_the_sidecars(library):
+    conn, _, folder = built_library(library)
+    ids = {path: cid for cid, path in collection_paths(conn).items()}
+    editing.rename(conn, ids["Holidays/2019/Japan"], "Japan trip")
+    editing.set_hidden(conn, ids["Best of 2019"], True)
+    result = executor.build_library(conn)
+    assert result.sidecars >= 1
+    text = sidecar_text(folder, F_LIBRARY)
+    assert "Collections/Holidays/2019/Japan trip" in text
+    assert "Best of 2019" not in text
+    assert (folder / F_LIBRARY).is_file()  # the file itself never moves
+
+
+def test_an_edited_sidecar_is_never_replaced(library):
+    conn, _, folder = built_library(library)
+    side = folder / f"{F_LIBRARY}.xmp"
+    side.write_text("<!-- mine -->", encoding="utf-8")
+    ids = {path: cid for cid, path in collection_paths(conn).items()}
+    editing.rename(conn, ids["Holidays/2019/Japan"], "Japan trip")
+    result = executor.build_library(conn)
+    assert result.kept_sidecars == [str(side)]
+    assert side.read_text(encoding="utf-8") == "<!-- mine -->"
+
+
+def test_a_restore_date_becomes_the_exif_date_in_the_library_only(library):
+    conn, root, folder = built_library(library)
+    restored = "2018/restored/IMG_0003.jpg"
+    # Taken 2018-12-25 08:00 at +10:00, which is 22:00 UTC the day before.
+    taken_ns = int(datetime(2018, 12, 24, 22, 0, tzinfo=UTC).timestamp()) * 1_000_000_000
+    assert (folder / restored).stat().st_mtime_ns == taken_ns
+    assert 'exif:DateTimeOriginal="2018-12-25T08:00:00+10:00"' in sidecar_text(folder, restored)
+    original = root / "backup/restored/IMG_0003.jpg"
+    assert original.stat().st_mtime_ns == make_fixtures.RESTORE_MTIME_NS  # never changed
+
+
+def test_a_date_you_set_reaches_the_sidecar_and_file_date_but_not_the_path(library):
+    conn, root, folder = built_library(library)
+    before = snapshot(root)
+    original_mtime = (folder / PNG_LIBRARY).stat().st_mtime_ns
+    assert dates.set_date(conn, "camera/screenshots/shot_01.png", "2020-02-03 04:05") == (
+        "2020-02-03T04:05:00"
+    )
+    result = executor.build_library(conn)
+    assert (result.sidecars, result.dates) == (1, 1)
+    assert 'exif:DateTimeOriginal="2020-02-03T04:05:00"' in sidecar_text(folder, PNG_LIBRARY)
+    local = int(datetime(2020, 2, 3, 4, 5).astimezone().timestamp()) * 1_000_000_000
+    assert (folder / PNG_LIBRARY).stat().st_mtime_ns == local
+    assert plan.plan_library(conn).to_copy == 0  # it stays in Undated/: copies never move
+    assert snapshot(root) == before
+
+    assert dates.clear_date(conn, "camera/screenshots/shot_01.png")
+    executor.build_library(conn)
+    assert (folder / PNG_LIBRARY).stat().st_mtime_ns == original_mtime
+    assert "DateTimeOriginal" not in sidecar_text(folder, PNG_LIBRARY)
+
+
+def test_a_date_you_set_files_a_new_picture_under_its_year(library):
+    conn, _, folder = library
+    settle_everything(conn)
+    dates.set_date(conn, "camera/screenshots/shot_01.png", "2017-07-07")
+    settings.set_library(conn, folder)
+    build(conn)
+    assert "2017/screenshots/shot_01.png" in library_files(folder)
+
+
+def test_dates_are_checked_and_need_a_catalogued_photo(library):
+    conn, _, _ = library
+    with pytest.raises(LibraryError, match="isn't a date"):
+        dates.set_date(conn, "camera/screenshots/shot_01.png", "03/02/2020")
+    with pytest.raises(LibraryError, match="isn't a real date"):
+        dates.set_date(conn, "camera/screenshots/shot_01.png", "2020-02-30")
+    with pytest.raises(LibraryError, match="no catalogued file"):
+        dates.set_date(conn, "camera/missing.jpg", "2020-02-03")
+    with pytest.raises(LibraryError, match="can't be dated"):
+        dates.set_date(conn, "camera/notes.txt", "2020-02-03")
+
+
+def test_keywords_a_photo_carries_are_kept_in_its_sidecar(library):
+    conn, root, folder = library
+    packet = (
+        b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/'
+        b'22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        b"<dc:subject><rdf:Bag><rdf:li>Fuji</rdf:li></rdf:Bag></dc:subject>"
+        b"</rdf:Description></rdf:RDF></x:xmpmeta>"
+    )
+    buffer = io.BytesIO()
+    make_fixtures.draw(99).save(buffer, "JPEG", xmp=packet)
+    (root.parent / "phone" / "Trip").mkdir(parents=True)
+    (root.parent / "phone" / "Trip" / "tagged.jpg").write_bytes(buffer.getvalue())
+    sources.add_source(conn, root.parent / "phone", "phone")
+    create_scan(conn, "phone", ["phone"])
+    run_scan(conn, "phone")
+    refresh_collections(conn)
+    match(conn)
+    settle_everything(conn)
+    settings.set_library(conn, folder)
+    build(conn)
+    text = sidecar_text(folder, "Undated/Trip/tagged.jpg")
+    assert "<rdf:li>Fuji</rdf:li>" in text
+    assert "<rdf:li>Collections/Trip</rdf:li>" in text
+
+
+def test_cli_sets_and_clears_dates(library, settings, monkeypatch):
+    conn, _, _ = library
+    monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(settings.photo_ledger_data_dir))
+    runner = CliRunner()
+    done = runner.invoke(cli.app, ["date", "set", "camera/screenshots/shot_01.png", "2020-02-03"])
+    assert done.exit_code == 0, done.output
+    assert "2020-02-03T00:00:00" in done.stdout
+    assert (
+        "Forgot"
+        in runner.invoke(cli.app, ["date", "clear", "camera/screenshots/shot_01.png"]).stdout
+    )
+    refused = runner.invoke(cli.app, ["date", "set", "camera/screenshots/shot_01.png", "soon"])
+    assert refused.exit_code == 1

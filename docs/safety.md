@@ -24,7 +24,9 @@ a journal entry is written before and after each operation.
 By default, nothing leaves an original backup: approved keepers are copied into the destination library. The library
 must sit outside every source and quarantine. Each picture is copied the verified way: a partial file, fsync, a hash
 check, then a rename that never replaces. The original is never removed, so building has no undo and needs none. Files
-already in the library stay put: a picture rejected afterwards is reported, never deleted. Moving rejected
+already in the library stay put: a picture rejected afterwards is reported, never deleted. The only library files the
+build ever replaces are its own XMP sidecars, and only while each still has the hash it was written with. A date fix
+changes only the library copy's file date, which leaves its content hash unchanged. Moving rejected
 copies to quarantine is opt-in for each source, with its own path, which can be on another device.
 
 A quarantine on another device makes reverts slower, not riskier. Moves and undo both copy, verify the hash, then
