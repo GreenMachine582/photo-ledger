@@ -56,4 +56,7 @@ Each source is processed in a pass with three stages, and each stage resumes whe
 | Pair previously skipped | Stays skipped and open |
 | Threshold changed | New pairs are queued, and decided pairs are kept |
 
+After a scan, `photo-ledger match` updates the pairs and `photo-ledger report` shows them. See
+[duplicate-detection.md](duplicate-detection.md).
+
 Size and `mtime_ns` don't prove content is unchanged, so `scan --verify` re-hashes every file and reconciles differences.

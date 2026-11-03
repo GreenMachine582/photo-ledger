@@ -3,14 +3,13 @@
 Exports are read-only with respect to sources, and refuse to write inside one.
 """
 
-import csv
 import sqlite3
 from pathlib import Path
 
-from photo_ledger.db import sources as source_queries
-from photo_ledger.errors import PhotoLedgerError
+from photo_ledger.exports.guard import ExportError, ensure_outside_sources, write_csv
 from photo_ledger.scanner.engine import get_scan
-from photo_ledger.sources.service import overlaps
+
+__all__ = ["COLUMNS", "ExportError", "export_files"]
 
 COLUMNS = (
     "source",
@@ -36,18 +35,9 @@ COLUMNS = (
 )
 
 
-class ExportError(PhotoLedgerError):
-    """An export can't be written where it was asked to go."""
-
-
 def export_files(conn: sqlite3.Connection, out: Path, scan_name: str | None = None) -> int:
     """Write the catalogue, or one scan's sources, to ``out``. Returns the number of rows."""
-    out = Path(out).expanduser().resolve()
-    for source in source_queries.all_sources(conn):
-        if overlaps(out, source["root_path"]):
-            raise ExportError(
-                f"{out} is inside source '{source['label']}'. Exports never write to a source."
-            )
+    ensure_outside_sources(conn, out)
     where, params = "", ()
     if scan_name is not None:
         scan = get_scan(conn, scan_name)
@@ -67,12 +57,4 @@ def export_files(conn: sqlite3.Connection, out: Path, scan_name: str | None = No
         """,
         params,
     )
-    out.parent.mkdir(parents=True, exist_ok=True)
-    count = 0
-    with open(out, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(COLUMNS)
-        for row in rows:
-            writer.writerow([row[column] for column in COLUMNS])
-            count += 1
-    return count
+    return write_csv(conn, out, COLUMNS, ([row[column] for column in COLUMNS] for row in rows))

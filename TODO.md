@@ -9,7 +9,6 @@ nothing can change your files until M4.
 
 Done when a read-only report matches a hand-checked sample, and rescanning the same files creates no new pairs.
 
-- [ ] Mismatch reports and explained keeper scores
 - [ ] Collections from folder names
 
 ## M3 Review

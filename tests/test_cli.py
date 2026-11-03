@@ -94,6 +94,21 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     assert "8 new" in matched.stdout
     assert "0 new" in runner.invoke(cli.app, ["match", "--threshold", "8"]).stdout
 
+    summary = runner.invoke(cli.app, ["report"])
+    assert summary.exit_code == 0, summary.output
+    assert "exact pairs open	5" in summary.stdout
+    dates = runner.invoke(cli.app, ["report", "dates", "--scan", "Old drives"])
+    assert "backup/restored/IMG_0003.jpg" in dates.stdout
+    pairs_csv = runner.invoke(cli.app, ["report", "pairs", "--csv", str(tmp_path / "pairs.csv")])
+    assert "Wrote 8 rows" in pairs_csv.stdout
+    assert runner.invoke(cli.app, ["report", "nope"]).exit_code == 2
+
+    trusted = runner.invoke(cli.app, ["source", "priority", "backup", "5"])
+    assert "'backup' now has priority 5." in trusted.stdout
+    runner.invoke(cli.app, ["match"])
+    exact = runner.invoke(cli.app, ["report", "pairs", "--kind", "exact"]).stdout
+    assert "higher-priority source (backup 5 vs camera 0)" in exact
+
     missing = runner.invoke(cli.app, ["scan", "run", "nope"])
     assert missing.exit_code == 1
     assert "no scan called 'nope'" in missing.output

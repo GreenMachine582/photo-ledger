@@ -22,6 +22,7 @@ from itertools import combinations
 
 from photo_ledger.db import now_iso
 from photo_ledger.db import pairs as queries
+from photo_ledger.matching.scoring import suggest
 from photo_ledger.matching.similar import similar_pairs
 
 DEFAULT_THRESHOLD = 8
@@ -129,7 +130,7 @@ def find_candidates(
 
 
 def match(
-    conn: sqlite3.Connection, threshold: int = DEFAULT_THRESHOLD, scorer: Scorer | None = None
+    conn: sqlite3.Connection, threshold: int = DEFAULT_THRESHOLD, scorer: Scorer | None = suggest
 ) -> MatchResult:
     """Bring the stored pairs in line with the catalogue, in one transaction."""
     candidates = find_candidates(conn, threshold, scorer)

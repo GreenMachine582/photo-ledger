@@ -51,7 +51,29 @@ lists each of them.
 
 ## Keeper scores
 
-Scores use resolution, EXIF completeness, earliest capture date, source priority and tidier path. File size only
-breaks ties, as larger doesn't always mean better. Every suggestion shows its reasons, and only you make the decision.
+Criteria are compared in this order, and the first that differs picks the suggested keeper:
+
+1. Higher resolution
+2. More complete EXIF: capture date, camera and GPS
+3. Earlier capture date
+4. Higher source priority, set with `source priority <label> <n>` (default 0)
+5. Tidier path: no copy marker such as ` (1)`, ` - Copy` or `Copy of`, then a shorter path
+
+File size only breaks ties, as larger doesn't always mean better. Every suggestion lists the criteria it wins and the
+ones it loses, and only you make the decision. A similar or name-conflict pair compares the best copy of each content.
+
+## Reports
+
+`photo-ledger report <name>` prints a read-only report, or writes it with `--csv <path>` outside every source. With
+`--scan <name>` it covers anything with a copy in that scan's sources.
+
+| Report | Shows |
+|---|---|
+| `summary` | File, content and pair counts, and the size of each report below |
+| `pairs` | Pairs with their suggested keeper and reasons. Filter with `--kind` and `--status` (default `open`, or `all`) |
+| `renamed` | The same content under different filenames or in different folders |
+| `dates` | Files whose file date and EXIF capture date are more than 24 hours apart |
+| `single-source` | Content seen in only one source |
+| `corrupt` | Corrupt and unreadable files |
 
 Similar matches are never resolved automatically. Bulk actions apply to exact duplicates only and pass through the plan.
