@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M2 done.** From the CLI you can map and scan sources, find exact duplicates, similar images and name conflicts with explained keeper suggestions, and read mismatch and collection reports. The review screen arrives in M3. See [TODO.md](TODO.md).
+> **Status: M3 done.** Scan from the CLI, then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Applying a plan arrives in M4. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 

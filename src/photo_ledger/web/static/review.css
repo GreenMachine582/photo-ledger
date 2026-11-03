@@ -1,0 +1,116 @@
+/* The comparison view. gth-ui has no image comparison component, so it lives here. */
+
+.pl-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .pl-compare {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pl-side {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius-lg);
+  padding: 0.75rem;
+  background: var(--bs-body-bg);
+}
+
+.pl-side.pl-suggested {
+  border-color: var(--bs-success);
+  box-shadow: 0 0 0 1px var(--bs-success);
+}
+
+.pl-side-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.pl-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(55vh, 36rem);
+  background: var(--bs-tertiary-bg);
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
+}
+
+.pl-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.pl-details {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.pl-details dt {
+  color: var(--bs-secondary-color);
+  font-weight: 400;
+}
+
+.pl-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pl-details dd.pl-diff {
+  background: var(--bs-warning-bg-subtle);
+  border-radius: var(--bs-border-radius-sm);
+  padding: 0 0.25rem;
+}
+
+.pl-copies {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.pl-reasons {
+  margin-bottom: 0.5rem;
+}
+
+.pl-reasons .pl-against {
+  color: var(--bs-secondary-color);
+}
+
+.pl-hint {
+  margin: 0;
+  color: var(--bs-secondary-color);
+  font-size: 0.85rem;
+}
+
+.pl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.pl-actions form {
+  margin: 0;
+}
+
+.pl-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pl-undo {
+  margin-top: 0.5rem;
+}

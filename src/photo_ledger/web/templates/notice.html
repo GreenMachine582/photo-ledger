@@ -1,0 +1,8 @@
+{% extends "page.html" %}
+{% from "toast.html" import gth_alert %}
+{% set page_title = "That didn't work" %}
+
+{% block page %}
+{{ gth_alert(message, kind="warning") }}
+<p><a href="javascript:history.back()">Go back</a> or <a href="/review">return to the review</a>.</p>
+{% endblock %}

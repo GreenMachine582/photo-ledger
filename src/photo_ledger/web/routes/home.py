@@ -1,11 +1,28 @@
-"""The landing page. M1 onwards replaces it with the Sources and Overview pages."""
+"""The overview: what's catalogued, how much is duplicated, and how far the review has got."""
 
-from fastapi import APIRouter, Request
+import sqlite3
+
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
+
+from photo_ledger.formatting import human_size
+from photo_ledger.review.overview import overview
+from photo_ledger.web.deps import get_db, render
 
 router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request) -> HTMLResponse:
-    return request.app.state.templates.TemplateResponse(request, "home.html", {})
+def home(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
+    data = overview(conn)
+    cards = [
+        {"label": "Files", "value": f"{data.files:,}"},
+        {"label": "Unique photos", "value": f"{data.contents:,}"},
+        {"label": "Duplicated space", "value": human_size(data.reclaimable_bytes)},
+        {"label": "Marked for the plan", "value": human_size(data.marked_bytes)},
+        {"label": "Open pairs", "value": f"{data.pairs.get('open', 0):,}"},
+        {"label": "Skipped", "value": f"{data.pairs.get('skipped', 0):,}"},
+        {"label": "Needs review", "value": f"{data.pairs.get('needs_review', 0):,}"},
+        {"label": "Decided", "value": f"{data.pairs.get('resolved', 0):,}"},
+    ]
+    return render(request, "overview.html", {"data": data, "cards": cards})

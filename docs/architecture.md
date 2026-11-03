@@ -15,6 +15,8 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `scanner/` | Resumable walk, metadata, hashes and verification | M1 |
 | `matching/` | Exact, similar and mismatch checks, stable pairs, scores | M2 |
 | `collections/` | Folder names to collections, and inheritance | M2 |
+| `review/` | Decisions, review sessions and what the comparison view shows | M3 |
+| `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
 | `actions/` | Planner, executor, undo and recovery | M4 |
 | `exports/` | CSV, JSON, XMP sidecars and the optional Immich export | M1, M5, M6 |

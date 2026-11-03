@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import greentechhub_ui
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from greentechhub_fastapi import register_core, register_health, register_logging
@@ -16,7 +16,8 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from photo_ledger import __version__
 from photo_ledger.config import LOCAL_HOSTS, Settings
-from photo_ledger.web.routes import home
+from photo_ledger.errors import PhotoLedgerError
+from photo_ledger.web.routes import collections, files, home, reports, review
 from photo_ledger.web.security import LocalOriginMiddleware
 
 WEB_DIR = Path(__file__).parent
@@ -31,7 +32,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     greentechhub_ui.install(
         templates.env,
         service_name="Photo Ledger",
-        nav_items=build_nav_items(custom_items=[{"label": "Home", "url": "/"}]),
+        nav_items=build_nav_items(
+            custom_items=[
+                {"label": "Overview", "url": "/"},
+                {"label": "Review", "url": "/review"},
+                {"label": "Collections", "url": "/collections"},
+                {"label": "Reports", "url": "/reports"},
+            ]
+        ),
     )
     app.state.templates = templates
 
@@ -49,4 +57,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     mount_static_dirs(app, greentechhub_ui.static_dirs())
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
     app.include_router(home.router)
+    app.include_router(review.router)
+    app.include_router(files.router)
+    app.include_router(collections.router)
+    app.include_router(reports.router)
+
+    @app.exception_handler(PhotoLedgerError)
+    async def expected_failure(request: Request, exc: PhotoLedgerError):
+        """An expected refusal, such as deciding a pair that no longer matches: say why."""
+        return templates.TemplateResponse(
+            request, "notice.html", {"message": str(exc)}, status_code=409
+        )
+
     return app

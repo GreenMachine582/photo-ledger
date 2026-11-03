@@ -10,7 +10,7 @@ __all__ = ["connect", "migrate", "now_iso", "now_ns", "open_db"]
 
 def now_iso() -> str:
     """A UTC timestamp for display columns such as ``created_at``."""
-    return datetime.now(UTC).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="microseconds")
 
 
 def now_ns() -> int:

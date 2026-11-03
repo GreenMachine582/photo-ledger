@@ -12,9 +12,8 @@ from datetime import UTC, datetime, timedelta
 
 from photo_ledger.collections.folders import collection_paths, collections_by_content, folder_of
 from photo_ledger.db import collections as collection_queries
-from photo_ledger.db import pairs as pair_queries
 from photo_ledger.matching.scoring import best_copy
-from photo_ledger.scanner.engine import get_scan
+from photo_ledger.matching.sides import Catalogue, label_path, scan_source_ids, touches
 
 #: File and capture dates further apart than this count as disagreeing. Wide enough for any
 #: time zone, since many cameras record local time with no offset.
@@ -29,29 +28,14 @@ class Report:
     note: str | None = None
 
 
-def _scope(conn: sqlite3.Connection, scan: str | None) -> set[int] | None:
-    if scan is None:
-        return None
-    scan_id = get_scan(conn, scan)["id"]
-    rows = conn.execute("SELECT source_id FROM scan_sources WHERE scan_id = ?", (scan_id,))
-    return {row[0] for row in rows}
-
-
-def _in_scope(files, scope) -> bool:
-    return scope is None or any(f["source_id"] in scope for f in files)
-
-
-def _path(row) -> str:
-    return f"{row['source_label']}/{row['rel_path']}"
+_scope = scan_source_ids
+_in_scope = touches
+_path = label_path
 
 
 def _copies(conn):
-    files = pair_queries.eligible_files(conn)
-    by_id = {row["id"]: row for row in files}
-    by_content = defaultdict(list)
-    for row in files:
-        by_content[row["content_id"]].append(row)
-    return files, by_id, by_content
+    catalogue = Catalogue.load(conn)
+    return list(catalogue.by_id.values()), catalogue.by_id, catalogue.by_content
 
 
 def pairs_report(
@@ -62,7 +46,7 @@ def pairs_report(
 ) -> Report:
     """Pairs with their suggested keeper and its reasons."""
     scope = _scope(conn, scan)
-    _, by_id, by_content = _copies(conn)
+    catalogue = Catalogue.load(conn)
     report = Report(
         "Pairs",
         (
@@ -85,10 +69,7 @@ def pairs_report(
     if status:
         query, params = query + " AND status = ?", [*params, status]
     for pair in conn.execute(query + " ORDER BY kind, id", params):
-        if pair["kind"] == "exact":
-            sides = [[by_id[i]] if i in by_id else [] for i in (pair["left_id"], pair["right_id"])]
-        else:
-            sides = [by_content.get(pair["left_id"], []), by_content.get(pair["right_id"], [])]
+        sides = catalogue.sides(pair)
         if not all(sides) or not _in_scope(sides[0] + sides[1], scope):
             continue  # an obsolete pair whose copies are gone, or out of scope
         names = []

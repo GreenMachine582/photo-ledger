@@ -17,6 +17,7 @@ from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.exports import csv_export, guard
+from photo_ledger.formatting import human_size
 from photo_ledger.matching import pairs as pair_matching
 from photo_ledger.matching import reports
 from photo_ledger.scanner import engine
@@ -210,15 +211,6 @@ def source_reconnect(
 # Scans --------------------------------------------------------------------------------------
 
 
-def _size(num_bytes: int) -> str:
-    size = float(num_bytes)
-    for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024:
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024
-    return f"{size:.1f} TB"
-
-
 @scan_app.command("create")
 def scan_create(
     name: str = typer.Argument(..., help="A name for the scan."),
@@ -293,7 +285,7 @@ def scan_list() -> None:
         for row in rows:
             typer.echo(
                 f"{row['name']}	{row['status']}	{row['source_labels']}"
-                f"	{row['last_opened_at'] or '-'}"
+                f"	{(row['last_opened_at'] or '-')[:19]}"
             )
 
 
@@ -307,7 +299,7 @@ def scan_status(name: str = typer.Argument(..., help="The scan to show.")) -> No
             where = f", after {row['resume_path']}" if row["resume_path"] else ""
             typer.echo(
                 f"  {row['label']}: {row['status']} ({row['mode']}, stage {row['stage']}{where}). "
-                f"{row['file_count']} files, {_size(row['total_bytes'])}, "
+                f"{row['file_count']} files, {human_size(row['total_bytes'])}, "
                 f"{row['error_count']} errors"
             )
         recent = engine.recent_errors(conn, scan["id"])

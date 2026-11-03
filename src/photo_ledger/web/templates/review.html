@@ -1,0 +1,88 @@
+{% extends "page.html" %}
+{% from "badge.html" import gth_badge %}
+{% from "card.html" import gth_card %}
+{% from "empty_state.html" import gth_empty_state %}
+{% from "form.html" import gth_csrf_field %}
+{% from "toast.html" import gth_alert %}
+{% from "select.html" import gth_select %}
+{% set page_title = "Review" %}
+{% if view %}
+{% set kind_label = view.pair.kind.replace("_", " ") %}
+{% set page_subtitle = ("Pair " ~ position ~ " of " ~ total if position else "Pair " ~ view.pair.id) ~ " · " ~ kind_label ~ (" (distance " ~ view.pair.distance ~ ")" if view.pair.kind == "similar" else "") %}
+{% else %}
+{% set page_subtitle = "One pair at a time, side by side. Deciding never touches your files." %}
+{% endif %}
+
+{% block extra_head %}<link rel="stylesheet" href="/static/review.css">{% endblock %}
+
+{% block page %}
+<form method="get" action="/review" class="pl-session" aria-label="Review session">
+  {%- set scan_options = [("", "All scans")] %}{% for name in scans %}{% set _ = scan_options.append((name, name)) %}{% endfor %}
+  {{ gth_select("scan", "Scope", scan_options, value=filters.scan or "", field_class="mb-0") }}
+  {%- set show_options = [] %}{% for key, label in show_labels.items() %}{% set _ = show_options.append((key, label ~ " (" ~ counts[key] ~ ")")) %}{% endfor %}
+  {{ gth_select("show", "Show", show_options, value=filters.show, field_class="mb-0") }}
+  {%- set kind_options = [("", "Any kind")] %}{% for kind in kinds %}{% set _ = kind_options.append((kind, kind.replace("_", " ")|capitalize)) %}{% endfor %}
+  {{ gth_select("kind", "Kind", kind_options, value=filters.kind or "", field_class="mb-0") }}
+  {{ gth_select("matches", "Matches", [("any", "Any match"), ("inside", "Only inside the scan's sources")], value=filters.matches, field_class="mb-0") }}
+  <button type="submit" class="btn btn-primary">Start</button>
+</form>
+{% if notice %}{{ gth_alert(notice, kind="warning") }}{% endif %}
+{% if not view %}
+{{ gth_empty_state(empty_message|default("Nothing left to review here. Run `photo-ledger match` after a scan to find more.")) }}
+{% else %}
+{% if view.decision %}
+{{ gth_alert("Already decided: " ~ view.decision.action.replace("_", " ") ~ " on " ~ view.decision.decided_at[:16].replace("T", " ") ~ " UTC. Deciding again replaces it.", kind="info") }}
+{% endif %}
+<div class="pl-compare">
+  {% for name, side in (("left", view.left), ("right", view.right)) %}
+  <section class="pl-side{% if view.suggested == name %} pl-suggested{% endif %}" aria-label="{{ name|capitalize }}">
+    <header class="pl-side-head">
+      <span class="pl-side-name">{{ name|upper }}</span>
+      {% if view.suggested == name %}{{ gth_badge("suggested", tone="good") }}{% endif %}
+    </header>
+    <a class="pl-image" href="/files/{{ side.file_id }}/original" target="_blank" rel="noopener">
+      <img src="/files/{{ side.file_id }}/preview" alt="{{ side.details['Path'] }}" loading="eager">
+    </a>
+    <dl class="pl-details">
+      {% for field in fields %}
+      <dt>{{ field }}</dt>
+      <dd class="{% if field in view.differing %}pl-diff{% endif %}">{{ side.details[field] or "—" }}</dd>
+      {% endfor %}
+    </dl>
+    {% if side.others %}
+    <details class="pl-copies">
+      <summary>+{{ side.others|length }} {{ "copy" if side.others|length == 1 else "copies" }} of this {{ "file" if view.pair.kind == "exact" else "image" }}</summary>
+      <ul>{% for path in side.others %}<li>{{ path }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+{% call gth_card(title="Suggested: " ~ ("keep " ~ view.suggested if view.suggested else "no preference")) %}
+  <ul class="pl-reasons">
+    {% for reason in view.reasons %}<li>{{ reason }}</li>{% endfor %}
+    {% for reason in view.against %}<li class="pl-against">but the other has {{ reason }}</li>{% endfor %}
+  </ul>
+  <p class="pl-hint">Only you decide. {% if view.pair.kind != "exact" %}Similar images are never resolved automatically. {% endif %}Keeping one side marks the other for the plan; nothing moves until you apply a plan.</p>
+{% endcall %}
+
+<div class="pl-actions" role="group" aria-label="Decision">
+  {% for action, key, label in actions %}
+  <form method="post" action="/review/{{ view.pair.id }}/decide{{ query|default('') }}">
+    {{ gth_csrf_field(csrf_token|default(none)) }}
+    <input type="hidden" name="action" value="{{ action }}">
+    <button type="submit" class="btn btn-outline-secondary" data-key="{{ key }}"><kbd>{{ key }}</kbd> {{ label }}</button>
+  </form>
+  {% endfor %}
+</div>
+{% endif %}
+{% if can_undo %}
+<form method="post" action="/review/undo{{ query }}" class="pl-undo">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="submit" class="btn btn-link" data-key="Z"><kbd>Z</kbd> Undo the last decision</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}<script src="/static/review.js"></script>{% endblock %}

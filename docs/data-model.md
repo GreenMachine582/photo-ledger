@@ -16,7 +16,7 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 | `collections` | `id`, `name`, `parent_id`, `hidden` | An album name, editable by you |
 | `collection_folders` | `source_id`, `folder_path`, `collection_id` | Which folder maps to which collection |
 | `review_pairs` | `id`, `pair_key`, `kind`, `left_id`, `right_id`, `distance`, `evidence`, `score_reasons`, `status`, `first_seen_scan_id`, `last_seen_scan_id`, `created_at`, `updated_at` | Two items to compare, shared by all scans |
-| `decisions` | `id`, `pair_id`, `action`, `decided_at`, `superseded_at` | Append-only review history |
+| `decisions` | `id`, `pair_id`, `action`, `rejected_kind`, `rejected_id`, `caused_by`, `previous_status`, `decided_at`, `superseded_at` | Append-only review history |
 | `plans` | `id`, `created_at`, `applied_at`, `status` | A batch of file operations |
 | `plan_actions` | `id`, `plan_id`, `file_id`, `op`, `from_path`, `to_path`, `expected_blake3`, `state`, `started_at`, `finished_at`, `error` | The operation journal, used for recovery and undo |
 
@@ -40,11 +40,14 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 
 - **Collections:** Unique by name within their parent, ignoring case. `collection_folders` maps a source's folder to
   its deepest collection, and rows are only ever added, so renames and merges survive rescans.
+- **Decisions:** `keep_left` and `keep_right` reject the other side: a file for an exact pair, a content (every copy)
+  for the others. The rejected item's other open pairs close as `closed` rows pointing at the decision through
+  `caused_by`. Undo and re-deciding supersede rows rather than editing them, and restore `previous_status`.
 - **Pairs:** `left_id` and `right_id` are file IDs for `exact` pairs and content IDs for `similar` and `name_conflict`.
   `status` is `open`, `skipped`, `resolved`, `needs_review` or `obsolete`, the last for a pair that stopped matching,
   such as when a copy went missing. An exact pair's `evidence` is its BLAKE3, so a resolved pair whose files changed
   content comes back as `needs_review`.
 
 The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables, `0002`
-adds `review_pairs` and `0003` adds `collections` and `collection_folders`. The decision and plan tables arrive with
-their milestones.
+adds `review_pairs`, `0003` adds `collections` and `collection_folders`, and `0004` adds `decisions`. The plan tables
+arrive with M4.

@@ -14,7 +14,8 @@ def eligible_files(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         SELECT f.id, f.source_id, f.content_id, f.rel_path, f.filename, f.size_bytes, f.mtime_ns,
                f.last_seen_scan_id, s.label AS source_label, s.priority AS source_priority,
                c.blake3, c.phash, c.width, c.height, c.captured_at, c.camera_make,
-               c.camera_model, c.gps_lat, c.gps_lon
+               c.camera_model, c.gps_lat, c.gps_lon, c.format, c.capture_offset,
+               c.capture_date_source, f.status
         FROM files f
         JOIN contents c ON c.id = f.content_id
         JOIN sources s ON s.id = f.source_id
