@@ -1,0 +1,32 @@
+"""Settings. Runtime data lives outside the repo, in the OS application data folder."""
+
+import secrets
+from pathlib import Path
+
+from greentechhub_core.config import GTHBaseSettings
+from platformdirs import user_data_path
+from pydantic import Field
+
+#: The only addresses the app answers on. See web/security.py.
+LOCAL_HOSTS = ("127.0.0.1", "localhost")
+
+
+def _default_data_dir() -> Path:
+    return user_data_path("photo-ledger", appauthor=False)
+
+
+class Settings(GTHBaseSettings):
+    """Read from PHOTO_LEDGER_* style environment variables or a local .env file."""
+
+    # GTH requires a key, but nothing here outlives the process: no sign-in, no sessions.
+    secret_key: str = Field(default_factory=lambda: secrets.token_hex(32))
+    photo_ledger_data_dir: Path = Field(default_factory=_default_data_dir)
+    photo_ledger_port: int = 8765
+
+    @property
+    def db_path(self) -> Path:
+        return self.photo_ledger_data_dir / "photo-ledger.db"
+
+    @property
+    def thumbnail_dir(self) -> Path:
+        return self.photo_ledger_data_dir / "thumbnails"

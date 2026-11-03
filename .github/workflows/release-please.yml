@@ -1,0 +1,33 @@
+# Keeps a release PR open on main (version bump + CHANGELOG.md from the
+# conventional commits since the last release); merging it tags vX.Y.Z and
+# publishes the GitHub Release. See CONTRIBUTING.md.
+#
+# Tokens come from the gth-release-bot GitHub App when it is configured
+# (vars.RELEASE_APP_CLIENT_ID + secrets.RELEASE_APP_PRIVATE_KEY): unlike
+# GITHUB_TOKEN, its release PR triggers CI. Without the app, release-please
+# falls back to GITHUB_TOKEN and its PR needs CI re-run by hand.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - id: app-token
+        if: vars.RELEASE_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

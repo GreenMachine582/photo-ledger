@@ -1,0 +1,23 @@
+// Renovate (GitHub App): PRs for Python dependencies and GitHub Actions.
+// The GTH pins move together, by hand or in one grouped PR: see CONTRIBUTING.md.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", ":dependencyDashboard"],
+  timezone: "Australia/Sydney",
+  // build(deps): ..., which passes pr-title.
+  semanticCommits: "enabled",
+  semanticCommitType: "build",
+  semanticCommitScope: "deps",
+  // Commits through the GitHub API, signed by GitHub: main requires signatures.
+  platformCommit: "enabled",
+  minimumReleaseAge: "3 days",
+  enabledManagers: ["pep621", "github-actions"],
+  packageRules: [
+    {
+      description: "The GTH packages are tested together, so bump them together",
+      matchPackageNames: ["/^greentechhub-/"],
+      groupName: "GTH packages",
+      automerge: false,
+    },
+  ],
+}
