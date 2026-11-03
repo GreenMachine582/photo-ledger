@@ -36,7 +36,8 @@ uv venv && uv pip install -e ".[dev]"
 .venv/bin/photo-ledger serve
 ```
 
-On Windows the tools are in `.venv/Scripts/`. The project skills in `.claude/skills/` cover the workflow:
+`.venv` belongs to one machine: build it with uv on each device (`uv python install 3.14` once), and never keep it
+in a synced folder such as OneDrive. On Windows the tools are in `.venv/Scripts/`. The project skills in `.claude/skills/` cover the workflow:
 `/next-task` picks up work, `/check` runs the checks CI runs and `/open-pr` opens or updates a PR.
 
 ## Conventions
