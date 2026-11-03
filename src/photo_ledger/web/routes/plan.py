@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
-from photo_ledger.actions import dryrun, planner
+from photo_ledger.actions import dryrun, executor, planner
 from photo_ledger.db import plans as queries
 from photo_ledger.formatting import human_size
 from photo_ledger.web.deps import get_db, render
@@ -20,6 +20,8 @@ router = APIRouter(prefix="/plan")
 NOTICES = {
     "built": "Plan rebuilt from your decisions and dry-run. Nothing has changed on disk.",
     "checked": "Dry run finished, with every file hashed. Nothing has changed on disk.",
+    "applied": "Applied. Undo it with `photo-ledger undo`.",
+    "incomplete": "Some moves failed, and their files were left in place. See the problems below.",
 }
 
 
@@ -31,11 +33,16 @@ def page_context(conn: sqlite3.Connection) -> dict:
         "stale": bool(current) and planner.is_stale(conn, current),
         "actions": [],
         "dry_run": None,
+        "can_apply": False,
         "cards": [],
         "stay": preview.stay,
         "stay_size": human_size(preview.stay_bytes),
         "unsafe": preview.unsafe,
         "unfinished": queries.latest(conn, "applying", "incomplete"),
+        "last_applied": conn.execute(
+            "SELECT * FROM plans WHERE status = 'applied' AND undoes_plan_id IS NULL"
+            " ORDER BY id DESC LIMIT 1"
+        ).fetchone(),
     }
     if current is None:
         return context
@@ -52,6 +59,8 @@ def page_context(conn: sqlite3.Connection) -> dict:
             for a in actions
         ],
         dry_run=result,
+        # Only a recorded clean dry run, on a plan no decision has overtaken, can be applied.
+        can_apply=bool(actions and current["checked_at"] and result.ok and not context["stale"]),
         cards=[
             {"label": "Moves to quarantine", "value": f"{len(actions):,}"},
             {"label": "Size", "value": human_size(sum(a["size_bytes"] for a in actions))},
@@ -74,6 +83,14 @@ def rebuild(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     summary = planner.build_plan(conn)
     dryrun.dry_run(conn, summary.plan_id)
     return RedirectResponse("/plan?notice=built", status_code=303)
+
+
+@router.post("/apply", dependencies=[Depends(require_csrf)])
+def apply_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+    """Apply the dry-run plan through the executor, after the page's confirm step."""
+    result = executor.apply(conn)
+    notice = "applied" if result.status == "applied" else "incomplete"
+    return RedirectResponse(f"/plan?notice={notice}", status_code=303)
 
 
 @router.post("/check", dependencies=[Depends(require_csrf)])

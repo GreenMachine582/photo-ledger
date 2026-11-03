@@ -4,19 +4,22 @@
 
 ## File safety
 
-Only `actions/executor.py` may change a source folder, and undo goes through it too. Nothing is ever deleted. SQLite and
-the filesystem can't commit together, so a journal entry is written before and after each operation.
+Only `actions/executor.py` may change a source folder or a quarantine, and undo and recovery go through it too. Nothing
+is ever deleted: a file leaves its folder only as the last step of a verified move, and the only other file the
+executor removes is its own unfinished `.photo-ledger-partial` copy. SQLite and the filesystem can't commit together, so
+a journal entry is written before and after each operation.
 
 | Safeguard | Requirement |
 |---|---|
 | Dry run | Read-only. Checks that both ends are online, each file is unchanged (size and date, or its hash with `--verify`), no destination exists or is shared, and there's room on each volume a copy crosses to. A plan only applies after a clean one |
-| Before moving | The file must exist and match its expected BLAKE3 hash, or that action stops |
+| Before moving | Both ends must be online, so no folder is ever created on the wrong drive. The file must exist and match its expected BLAKE3 hash, or that action stops and its file stays put |
 | Destination | Never overwrite an existing file |
-| Same volume | Use an atomic rename where supported |
-| Across volumes | Copy, verify the hash, then remove the original |
+| Same volume | A rename that never replaces: `os.rename` on Windows, a hard link then unlink elsewhere |
+| Across volumes | Copy to a `.photo-ledger-partial` file, fsync, verify the hash, rename it into place without replacing, then remove the original |
+| Journal | Each action is `started` before its file operation and `done` or `failed` after it. A plan is `applied` only when every action is done, and is `incomplete` otherwise |
 | Quarantine | Off by default. Turned on per source with `source quarantine <label> <folder>`, on any device, and suggested on the same volume because that's faster. The folder must already exist and sit outside every source, and no source can be mapped inside it |
-| Interrupted plan | On next start, `recovery.py` finds unfinished actions and checks both paths before continuing or rolling back |
-| Undo | Verify the quarantined file, and never overwrite a file created since |
+| Interrupted plan | `recovery.py` runs before `apply`, `undo` and `serve`. For each `started` action it removes any partial copy, then checks both paths: original verified and no destination means retry, destination verified and no original means done, both verified means finish the move, and anything else is marked failed with both files left alone. An action whose source or quarantine is unplugged waits |
+| Undo | A plan of its own, with `restore` actions in reverse order through the same executor. Each quarantined file is verified first, and a file created since at the original path is never overwritten. If the quarantine is offline, undo names it |
 
 By default, nothing leaves an original backup: approved keepers are copied into the destination library. Moving rejected
 copies to quarantine is opt-in for each source, with its own path, which can be on another device.

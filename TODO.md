@@ -3,16 +3,7 @@
 # ✅ TODO
 
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
-nothing can change your files until M4.
-
-## M4 Apply safely
-
-Done when a plan applied and undone restores the fixture set exactly, including across volumes, and a simulated crash
-halfway never reports the plan as complete.
-
-- [ ] Plan and dry run
-- [ ] Opt-in quarantine on any device
-- [ ] Journal, recovery and undo through the executor
+only an applied plan ever changes your files.
 
 ## M5 Organise
 

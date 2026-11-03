@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M3 done.** Scan from the CLI, then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Applying a plan arrives in M4. See [TODO.md](TODO.md).
+> **Status: M4 done.** Scan from the CLI, then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Decisions build a plan that's dry-run, then applied with a journal, crash recovery and undo, moving rejected copies into an opt-in quarantine. Building a clean library arrives in M5. See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 
@@ -56,6 +56,15 @@ photo-ledger scan run "Old drives" --verify   # re-hash everything instead of tr
 photo-ledger match                            # find duplicates, similar images and name conflicts
 photo-ledger report pairs                     # also: summary, renamed, dates, single-source, corrupt, collections
 photo-ledger export csv catalogue.csv
+```
+
+After reviewing, only an applied plan moves anything, and only for sources that opted in to quarantine:
+
+```bash
+photo-ledger source quarantine usb-1 /media/usb-1/Quarantine   # an existing folder outside every source
+photo-ledger plan --verify    # build the plan from your decisions and dry-run it; changes nothing
+photo-ledger apply            # move the rejected copies, verified by hash, after you confirm
+photo-ledger undo             # put them back
 ```
 
 To try it without real photos, `python scripts/make_fixtures.py <empty-folder>` generates a test tree.

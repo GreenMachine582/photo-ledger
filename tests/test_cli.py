@@ -10,7 +10,8 @@ def test_version():
     assert __version__ in result.stdout
 
 
-def test_serve_binds_only_to_loopback(monkeypatch):
+def test_serve_binds_only_to_loopback(tmp_path, monkeypatch):
+    monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(tmp_path))  # serve recovers plans first
     calls = {}
     monkeypatch.setattr(cli.uvicorn, "run", lambda *args, **kwargs: calls.update(kwargs))
     result = CliRunner().invoke(cli.app, ["serve", "--port", "9000"])

@@ -69,7 +69,9 @@ else. See [rescans.md](rescans.md).
 - **Plan** (`/plan`): Every proposed move, its total size and a dry-run result, with an explicit confirm step. Copies
   in sources without a quarantine are counted as staying where they are, and a copy whose picture would be left with
   no kept copy is left alone. Viewing the page runs a quick dry run without recording it. **Rebuild plan** rebuilds the
-  plan from your decisions, and **Dry run with hashes** hashes every file. Both write only to the catalogue. Bulk
+  plan from your decisions, and **Dry run with hashes** hashes every file. Both write only to the catalogue. **Apply
+plan** appears only after a clean recorded dry run, and asks you to confirm. Undo stays on the command line
+(`photo-ledger undo`). Bulk
   actions apply to exact duplicates only, and always go through this page. `photo-ledger plan` does the same from the
   command line.
 

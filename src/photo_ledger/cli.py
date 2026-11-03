@@ -12,7 +12,7 @@ import uvicorn
 
 from photo_ledger import __version__
 from photo_ledger import sources as source_service
-from photo_ledger.actions import dryrun, planner
+from photo_ledger.actions import dryrun, executor, planner, recovery
 from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
@@ -62,6 +62,8 @@ def version() -> None:
 def serve(port: int | None = typer.Option(None, help="Port on 127.0.0.1.")) -> None:
     """Run the review UI. It only ever binds to 127.0.0.1."""
     settings = Settings()
+    with catalogue() as conn:
+        _echo_recovery(recovery.recover(conn))
     uvicorn.run(
         "photo_ledger.web.app:create_app",
         factory=True,
@@ -170,7 +172,66 @@ def plan(
         for where in summary.unsafe:
             typer.echo(f"  left alone, as no kept copy would remain: {where}")
         if summary.moves:
-            _echo_dry_run(dryrun.dry_run(conn, summary.plan_id, verify=verify))
+            result = dryrun.dry_run(conn, summary.plan_id, verify=verify)
+            _echo_dry_run(result)
+            if result.ok:
+                typer.echo("Apply it with `photo-ledger apply`.")
+
+
+def _echo_recovery(result: recovery.Recovery) -> None:
+    for plan_id in result.plans:
+        typer.secho(
+            f"Plan {plan_id} was interrupted. Checked: {result.pending} to retry, "
+            f"{result.done + result.finished} finished. Run `photo-ledger apply` to complete it.",
+            fg=typer.colors.YELLOW,
+        )
+    for message in result.failed:
+        typer.secho(f"  {message}", fg=typer.colors.RED)
+    for where in result.waiting:
+        typer.echo(f"  waiting for its drives to be connected: {where}")
+
+
+def _echo_applied(result: executor.ApplyResult, verb: str) -> None:
+    typer.echo(f"Plan {result.plan_id}: {result.done} {verb}, {len(result.failed)} failed.")
+    for message in result.failed:
+        typer.secho(f"  {message}", fg=typer.colors.RED)
+    if result.status != "applied":
+        typer.echo("The plan is incomplete. Fix the problems above and run the command again.")
+        raise typer.Exit(1)
+
+
+@app.command()
+def apply(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Move rejected copies to quarantine, as planned and dry-run. Nothing is deleted."""
+    with catalogue() as conn:
+        _echo_recovery(recovery.recover(conn))
+        current = planner.draft(conn)
+        if current is not None and not yes:
+            result = dryrun.dry_run(conn, current["id"])
+            _echo_dry_run(result)
+            if not result.ok:
+                raise typer.Exit(1)
+            typer.confirm(
+                f"Move {result.actions} files ({human_size(result.bytes)}) to quarantine?",
+                abort=True,
+            )
+        _echo_applied(executor.apply(conn), "moved")
+        typer.echo("Undo it with `photo-ledger undo`.")
+
+
+@app.command()
+def undo(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Put back every file the most recent applied plan moved. Never overwrites a file."""
+    with catalogue() as conn:
+        if not yes:
+            typer.confirm(
+                "Move the most recent plan's files back where they came from?", abort=True
+            )
+        _echo_applied(executor.undo(conn), "restored")
 
 
 # Sources ------------------------------------------------------------------------------------
