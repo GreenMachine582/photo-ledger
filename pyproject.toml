@@ -1,6 +1,6 @@
 [project]
 name = "photo-ledger"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first photo catalogue: index backups, detect duplicates and mismatches, review side by side, and organise safely."
 readme = "README.md"
 license = "MIT"
