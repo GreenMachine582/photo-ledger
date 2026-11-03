@@ -7,6 +7,7 @@ license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "pillow>=11",
     "platformdirs>=4.2",
     "typer>=0.12",
     "uvicorn>=0.30",
@@ -40,3 +41,4 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["scripts"]
