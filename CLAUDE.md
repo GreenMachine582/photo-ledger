@@ -36,6 +36,9 @@ uv venv && uv pip install -e ".[dev]"
 .venv/bin/photo-ledger serve
 ```
 
+On Windows the tools are in `.venv/Scripts/`. The project skills in `.claude/skills/` cover the workflow:
+`/next-task` picks up work, `/check` runs the checks CI runs and `/open-pr` opens or updates a PR.
+
 ## Conventions
 
 - `src/` layout, numbered SQL migrations, standard library `sqlite3`.
