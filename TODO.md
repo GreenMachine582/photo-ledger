@@ -11,7 +11,6 @@ Done when a paused scan resumes, a new overlapping scan reuses its hashes, chang
 marks nothing missing, and source files are unchanged. Build it against generated fixtures before pointing it at a real
 backup, and keep a separate copy of anything irreplaceable.
 
-- [ ] Numbered SQL migrations and the SQLite connection setup
 - [ ] `scripts/make_fixtures.py` for generated test images
 - [ ] Source mapping with device details, reconnecting and overlap refusal
 - [ ] Saved scans that pause, resume and overlap
