@@ -1,0 +1,41 @@
+{% extends "page.html" %}
+{% from "stat_card.html" import gth_stat_grid %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "badge.html" import gth_badge %}
+{% from "empty_state.html" import gth_empty_state %}
+{% set page_title = "Overview" %}
+{% set page_subtitle = "Catalogue backups, find duplicates and organise them safely." %}
+
+{% block page %}
+{% if not data.sources %}
+{{ gth_empty_state("No sources mapped yet. Map one with `photo-ledger source add <path> --label <name>`, then scan it.") }}
+{% else %}
+{{ gth_stat_grid(cards, cols=4) }}
+
+<h2 class="h5 mt-4">Sources</h2>
+{% call gth_table(["Source", "State", "Type", "Files", "Last scan", "Root"]) %}
+  {% call(row) gth_table_body(data.sources, colspan=6) %}
+  <tr>
+    <td>{{ row.label }}</td>
+    <td>{{ gth_badge("online", tone="good") if row.online else gth_badge("offline", tone="warn") }}</td>
+    <td>{{ row.type }}</td>
+    <td>{{ "{:,}".format(row.files) }}</td>
+    <td>{{ row.last_scan or "—" }}</td>
+    <td class="text-break">{{ row.root }}</td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+
+<h2 class="h5 mt-4">Scans</h2>
+{% call gth_table(["Scan", "Status", "Sources", ""]) %}
+  {% call(row) gth_table_body(data.scans, empty_message="No scans yet. Create one with `photo-ledger scan create`.", colspan=4) %}
+  <tr>
+    <td>{{ row.name }}</td>
+    <td>{{ row.status }}</td>
+    <td>{{ row.labels }}</td>
+    <td><a href="/review?scan={{ row.name|urlencode }}">Review this scan</a></td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

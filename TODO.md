@@ -10,7 +10,6 @@ nothing can change your files until M4.
 Done when decisions survive a restart, a pair resolved in one scan is resolved in the others, and a rescan after adding
 files queues only the new pairs.
 
-- [ ] Collections page and overview
 - [ ] Check that the Secure CSRF cookie works on `127.0.0.1` in Firefox and Edge (confirmed in Chromium)
 
 ## M4 Apply safely

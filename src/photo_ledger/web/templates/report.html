@@ -1,0 +1,27 @@
+{% extends "page.html" %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "select.html" import gth_select %}
+{% set page_title = "Reports" %}
+{% set page_subtitle = (report.title if report else "Read-only reports on the catalogue: duplicates, mismatches, dates and corrupt files.") %}
+
+{% block page %}
+<nav class="nav nav-pills mb-3" aria-label="Reports">
+  {% for item in names %}
+  <a class="nav-link{% if report and item == name %} active{% endif %}" href="/reports/{{ item }}{% if scan %}?scan={{ scan|urlencode }}{% endif %}">{{ item.replace("-", " ")|capitalize }}</a>
+  {% endfor %}
+</nav>
+{% if report %}
+<form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  {%- set scan_options = [("", "All scans")] %}{% for item in scans %}{% set _ = scan_options.append((item, item)) %}{% endfor %}
+  {{ gth_select("scan", "Scope", scan_options, value=scan, field_class="mb-0") }}
+  <button type="submit" class="btn btn-outline-secondary">Show</button>
+  <a class="btn btn-outline-secondary" href="/reports/{{ name }}.csv{% if scan %}?scan={{ scan|urlencode }}{% endif %}">CSV</a>
+</form>
+{% if report.note %}<p class="text-body-secondary">{{ report.note }}</p>{% endif %}
+{% call gth_table(report.columns) %}
+  {% call(row) gth_table_body(report.rows, empty_message="Nothing to report.", colspan=report.columns|length) %}
+  <tr>{% for value in row %}<td class="text-break">{{ "" if value is none else value }}</td>{% endfor %}</tr>
+  {% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

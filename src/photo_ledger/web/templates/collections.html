@@ -1,0 +1,56 @@
+{% extends "page.html" %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "badge.html" import gth_badge %}
+{% from "form.html" import gth_csrf_field, gth_form_field %}
+{% from "select.html" import gth_select %}
+{% from "toast.html" import gth_alert %}
+{% from "card.html" import gth_card %}
+{% set page_title = "Collections" %}
+{% set page_subtitle = "Named after folders and kept in the ledger, so they outlive the folders. Editing never changes a folder." %}
+
+{% block page %}
+{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
+
+{% if options %}
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    {% call gth_card(title="Rename") %}
+    <form method="post" action="/collections/rename">
+      {{ gth_csrf_field(csrf_token|default(none)) }}
+      {{ gth_select("collection", "Collection", options, id="rename-collection") }}
+      {{ gth_form_field("name", "New name") }}
+      <button type="submit" class="btn btn-primary">Rename</button>
+    </form>
+    {% endcall %}
+  </div>
+  <div class="col-md-6">
+    {% call gth_card(title="Merge") %}
+    <form method="post" action="/collections/merge">
+      {{ gth_csrf_field(csrf_token|default(none)) }}
+      {{ gth_select("source", "Merge", options, id="merge-source") }}
+      {{ gth_select("target", "Into", options, id="merge-target") }}
+      <button type="submit" class="btn btn-primary">Merge</button>
+    </form>
+    {% endcall %}
+  </div>
+</div>
+{% endif %}
+
+{% call gth_table(["Collection", "Folders", "Files", "Photos", ""]) %}
+  {% call(row) gth_table_body(rows, empty_message="No collections yet. Run `photo-ledger match` after a scan.", colspan=5) %}
+  <tr>
+    <td>{{ row.path }} {% if row.hidden %}{{ gth_badge("hidden", tone="neutral") }}{% endif %}</td>
+    <td>{{ row.folders }}</td>
+    <td>{{ row.files }}</td>
+    <td>{{ row.contents }}</td>
+    <td class="text-end">
+      <form method="post" action="/collections/{{ row.id }}/hidden" class="d-inline">
+        {{ gth_csrf_field(csrf_token|default(none)) }}
+        <input type="hidden" name="hidden" value="{{ 'false' if row.hidden else 'true' }}">
+        <button type="submit" class="btn btn-sm btn-link">{{ "Show" if row.hidden else "Hide" }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+{% endblock %}

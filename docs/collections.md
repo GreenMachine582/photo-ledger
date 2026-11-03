@@ -15,7 +15,9 @@ and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collect
   no collection.
 - **Building:** `photo-ledger match` maps any new folder before matching, and `photo-ledger report collections` lists
   them. Mappings are only ever added, never rewritten.
-- **Editing:** Rename, merge or hide collections on the Collections page (M3). Mappings persist across rescans.
+- **Editing:** Rename, merge or hide collections on the Collections page. A rename that would clash with a sibling is
+  refused, so merge instead. Merging moves the folders and sub-collections across, combining sub-collections with the
+  same name. Only the ledger changes: no folder is renamed or moved. Mappings persist across rescans.
 - **Undo:** Inherited collections come from decisions, so undoing a decision removes them too.
 
 ## Outputs

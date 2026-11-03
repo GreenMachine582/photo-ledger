@@ -58,11 +58,14 @@ else. See [rescans.md](rescans.md).
 
 ## Other pages
 
-- **Sources:** Map, relabel and reconnect drives and folders, set quarantine paths, and see each source's storage type,
-  online state and last scan. Scans can be created, paused and resumed here too.
-- **Overview:** File counts by source, reclaimable space, and how many pairs are open, skipped and decided.
-- **Mismatches:** The date, name and single-source reports. See [duplicate-detection.md](duplicate-detection.md).
-- **Collections:** Rename, merge or hide collections. See [collections.md](collections.md).
+- **Overview** (`/`): File and photo counts, duplicated space, space marked for the plan by your decisions, and how
+  many pairs are open, skipped, needing review and decided. It lists each source with its online state and last scan,
+  and each scan with a link to review it.
+- **Sources:** Mapping, relabelling and reconnecting stay on the command line for now (`photo-ledger source`), along
+  with creating and running scans.
+- **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
+  mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).
+- **Collections** (`/collections`): Rename, merge or hide collections. See [collections.md](collections.md).
 - **Plan:** Every proposed move, its total size and a dry-run result, with an explicit confirm step. Bulk actions apply
   to exact duplicates only, and always go through this page.
 
