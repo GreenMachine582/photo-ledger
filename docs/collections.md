@@ -6,9 +6,16 @@ Each folder name is a collection stored in the ledger, because the folder may di
 consolidated. The keeper inherits the collections of every copy it replaces. For example, if `Japan 2019/IMG_0412.jpg`
 and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collections.
 
-- **Naming:** Use the deepest meaningful folder, keeping its parents as a hierarchy, so `Holidays/2019/Japan` stays nested.
-- **Generic folders:** Hide configurable names such as `DCIM`, `Camera` and `Pictures`, plus the source root.
-- **Editing:** Rename, merge or hide collections on the Collections page. Mappings persist across rescans.
+- **Naming:** Use the deepest meaningful folder, keeping its parents as a hierarchy, so `Pictures/Holidays/2019/Japan`
+  becomes `Holidays > 2019 > Japan`. Names match case-insensitively, so `holidays/2019/japan` on another drive joins
+  the same collection.
+- **Generic folders:** Leave out the source root, DCF camera folders such as `100CANON`, and generic names: `DCIM`,
+  `Camera`, `Pictures`, `Photos`, `My Pictures` and `Camera Roll` by default. Change the list with
+  `PHOTO_LEDGER_GENERIC_FOLDERS`, as JSON such as `["DCIM", "Pictures"]`. A folder with no meaningful name left has
+  no collection.
+- **Building:** `photo-ledger match` maps any new folder before matching, and `photo-ledger report collections` lists
+  them. Mappings are only ever added, never rewritten.
+- **Editing:** Rename, merge or hide collections on the Collections page (M3). Mappings persist across rescans.
 - **Undo:** Inherited collections come from decisions, so undoing a decision removes them too.
 
 ## Outputs

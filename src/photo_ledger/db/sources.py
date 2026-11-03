@@ -45,3 +45,7 @@ def update_root(conn: sqlite3.Connection, source_id: int, *, root_path: str, dev
 
 def set_state(conn: sqlite3.Connection, source_id: int, state: str) -> None:
     conn.execute("UPDATE sources SET state = ? WHERE id = ?", (state, source_id))
+
+
+def set_priority(conn: sqlite3.Connection, source_id: int, priority: int) -> None:
+    conn.execute("UPDATE sources SET priority = ? WHERE id = ?", (priority, source_id))

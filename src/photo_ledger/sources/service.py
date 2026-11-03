@@ -134,3 +134,11 @@ def reconnect(conn: sqlite3.Connection, label: str, new_root: Path | str) -> sql
     with conn:
         queries.update_root(conn, source["id"], root_path=str(root), device=details)
     return queries.by_id(conn, source["id"])
+
+
+def set_priority(conn: sqlite3.Connection, label: str, priority: int) -> sqlite3.Row:
+    """Set how strongly keeper suggestions prefer this source's copies. Higher wins."""
+    source = get_source(conn, label)
+    with conn:
+        queries.set_priority(conn, source["id"], priority)
+    return queries.by_id(conn, source["id"])

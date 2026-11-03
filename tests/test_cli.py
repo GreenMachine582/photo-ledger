@@ -49,7 +49,9 @@ def test_source_commands(tmp_path, monkeypatch):
 
 
 def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
-    root, _ = fixture_tree
+    root, manifest = fixture_tree
+    camera_files = sum(rel.startswith("camera/") for rel in manifest["files"])
+    camera_photos = manifest["supported"]["camera"]
     monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(tmp_path / "data"))
     runner = CliRunner()
     for label in ("camera", "backup"):
@@ -62,7 +64,7 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
 
     ran = runner.invoke(cli.app, ["scan", "run", "Old drives"])
     assert ran.exit_code == 0, ran.output
-    assert "camera: complete. 5 listed" in ran.stdout
+    assert f"camera: complete. {camera_files} listed" in ran.stdout
     assert "Scan 'Old drives' is complete." in ran.stdout
 
     listed = runner.invoke(cli.app, ["scan", "list"])
@@ -75,13 +77,40 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
 
     verified = runner.invoke(cli.app, ["scan", "run", "Old drives", "--verify"])
     assert verified.exit_code == 0, verified.output
-    assert "camera: complete. 5 listed, 0 unchanged, 4 hashed (0 new)" in verified.stdout
+    assert (
+        f"camera: complete. {camera_files} listed, 0 unchanged, {camera_photos} hashed (0 new)"
+        in verified.stdout
+    )
 
     exported = runner.invoke(cli.app, ["export", "csv", str(tmp_path / "out.csv")])
     assert exported.exit_code == 0, exported.output
-    assert "Wrote 12 files" in exported.stdout
+    assert f"Wrote {len(manifest['files'])} files" in exported.stdout
     inside = runner.invoke(cli.app, ["export", "csv", str(root / "camera" / "out.csv")])
     assert inside.exit_code == 1
+
+    matched = runner.invoke(cli.app, ["match"])
+    assert matched.exit_code == 0, matched.output
+    assert "threshold of 8: 5 exact, 1 name conflict, 2 similar." in matched.stdout
+    assert "8 new" in matched.stdout
+    assert "Collections from folder names: 10 (10 new, 8 folders mapped)." in matched.stdout
+    collections = runner.invoke(cli.app, ["report", "collections"]).stdout
+    assert "Holidays/2019/Japan		1	1	1" in collections
+    assert "0 new" in runner.invoke(cli.app, ["match", "--threshold", "8"]).stdout
+
+    summary = runner.invoke(cli.app, ["report"])
+    assert summary.exit_code == 0, summary.output
+    assert "exact pairs open	5" in summary.stdout
+    dates = runner.invoke(cli.app, ["report", "dates", "--scan", "Old drives"])
+    assert "backup/restored/IMG_0003.jpg" in dates.stdout
+    pairs_csv = runner.invoke(cli.app, ["report", "pairs", "--csv", str(tmp_path / "pairs.csv")])
+    assert "Wrote 8 rows" in pairs_csv.stdout
+    assert runner.invoke(cli.app, ["report", "nope"]).exit_code == 2
+
+    trusted = runner.invoke(cli.app, ["source", "priority", "backup", "5"])
+    assert "'backup' now has priority 5." in trusted.stdout
+    runner.invoke(cli.app, ["match"])
+    exact = runner.invoke(cli.app, ["report", "pairs", "--kind", "exact"]).stdout
+    assert "higher-priority source (backup 5 vs camera 0)" in exact
 
     missing = runner.invoke(cli.app, ["scan", "run", "nope"])
     assert missing.exit_code == 1

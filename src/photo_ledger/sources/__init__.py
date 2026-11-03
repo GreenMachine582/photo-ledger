@@ -9,6 +9,7 @@ from photo_ledger.sources.service import (
     list_sources,
     reconnect,
     refresh_state,
+    set_priority,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "list_sources",
     "reconnect",
     "refresh_state",
+    "set_priority",
 ]

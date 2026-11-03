@@ -9,10 +9,12 @@ Everything is drawn from a seed and given fixed modification times, so the outpu
 deterministic. ``build`` returns a manifest describing which files play which role.
 """
 
+import hashlib
 import io
 import os
 import random
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -74,6 +76,12 @@ def png_bytes(image: Image.Image) -> bytes:
     return buffer.getvalue()
 
 
+def camera_mtime_ns(taken: str) -> int:
+    """The file date a camera writes for an EXIF time taken at +10:00, as UTC nanoseconds."""
+    local = datetime.strptime(taken, "%Y:%m:%d %H:%M:%S").replace(tzinfo=UTC)
+    return int((local - timedelta(hours=10)).timestamp()) * 1_000_000_000
+
+
 def _write(root: Path, rel: str, data: bytes, mtime_ns: int = BASE_MTIME_NS) -> str:
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -88,9 +96,17 @@ def build(root: Path, seed: int = 0) -> dict:
     root.mkdir(parents=True, exist_ok=True)
     pics = {name: draw(seed * 100 + index) for index, name in enumerate("abcdef")}
 
-    a = jpeg_bytes(pics["a"], taken="2019:06:01 10:00:00")
-    b = jpeg_bytes(pics["b"], taken="2019:06:02 11:30:00")
-    c = jpeg_bytes(pics["c"], taken="2020:01:15 09:00:00")
+    taken = {
+        "a": "2019:06:01 10:00:00",
+        "b": "2019:06:02 11:30:00",
+        "c": "2020:01:15 09:00:00",
+        "f": "2019:07:14 10:32:00",
+    }
+    when = {name: camera_mtime_ns(value) for name, value in taken.items()}
+    a = jpeg_bytes(pics["a"], taken=taken["a"])
+    b = jpeg_bytes(pics["b"], taken=taken["b"])
+    c = jpeg_bytes(pics["c"], taken=taken["c"])
+    f = jpeg_bytes(pics["f"], taken=taken["f"])
     d = png_bytes(pics["d"])
     e = jpeg_bytes(pics["e"], taken="2018:12:25 08:00:00")
     b_small = jpeg_bytes(pics["b"].resize((160, 120)), quality=70)
@@ -101,10 +117,25 @@ def build(root: Path, seed: int = 0) -> dict:
         "sources": ["camera", "backup"],
         "exact_copies": [
             (
-                w(root, "camera/2019/IMG_0001.jpg", a),
-                w(root, "backup/Holiday 2019/IMG_0001.jpg", a),
+                w(root, "camera/2019/IMG_0001.jpg", a, when["a"]),
+                w(root, "backup/Holiday 2019/IMG_0001.jpg", a, when["a"]),
             ),
-            (w(root, "camera/2019/IMG_0002.jpg", b), w(root, "backup/Holiday 2019/renamed.jpg", b)),
+            (
+                w(root, "camera/2019/IMG_0002.jpg", b, when["b"]),
+                w(root, "backup/Holiday 2019/renamed.jpg", b, when["b"]),
+            ),
+            (
+                w(root, "camera/DCIM/100CANON/IMG_0412.jpg", f, when["f"]),
+                w(root, "backup/Pictures/Holidays/2019/Japan/IMG_0412.jpg", f, when["f"]),
+            ),
+            (
+                "camera/DCIM/100CANON/IMG_0412.jpg",
+                w(root, "backup/Best of 2019/IMG_0412 (1).jpg", f, when["f"]),
+            ),
+            (
+                "backup/Pictures/Holidays/2019/Japan/IMG_0412.jpg",
+                "backup/Best of 2019/IMG_0412 (1).jpg",
+            ),
         ],
         "similar": [
             (
@@ -113,7 +144,9 @@ def build(root: Path, seed: int = 0) -> dict:
             ),
             ("camera/screenshots/shot_01.png", w(root, "backup/shot_01.jpg", d_as_jpeg)),
         ],
-        "name_conflicts": [("camera/2019/IMG_0001.jpg", w(root, "camera/2020/IMG_0001.jpg", c))],
+        "name_conflicts": [
+            ("camera/2019/IMG_0001.jpg", w(root, "camera/2020/IMG_0001.jpg", c, when["c"]))
+        ],
         "pngs": [w(root, "camera/screenshots/shot_01.png", d)],
         "date_mismatch": [
             w(root, "backup/restored/IMG_0003.jpg", e, mtime_ns=RESTORE_MTIME_NS),
@@ -123,7 +156,7 @@ def build(root: Path, seed: int = 0) -> dict:
             w(root, "camera/notes.txt", b"not a photo\n"),
             w(root, "backup/clip.mp4", b"\x00\x00\x00\x18ftypmp42"),
         ],
-        "distinct": ["a", "b", "c", "d", "e"],
+        "distinct": ["a", "b", "c", "d", "e", "f"],
         "taken": {
             "camera/2019/IMG_0001.jpg": "2019-06-01T10:00:00",
             "backup/restored/IMG_0003.jpg": "2018-12-25T08:00:00",
@@ -131,6 +164,14 @@ def build(root: Path, seed: int = 0) -> dict:
     }
     manifest["files"] = sorted(
         p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()
+    )
+    photos = [rel for rel in manifest["files"] if rel.lower().endswith((".jpg", ".jpeg", ".png"))]
+    manifest["supported"] = {
+        source: sum(rel.startswith(source + "/") for rel in photos)
+        for source in manifest["sources"]
+    }
+    manifest["unique_contents"] = len(
+        {hashlib.sha256((root / rel).read_bytes()).digest() for rel in photos}
     )
     return manifest
 

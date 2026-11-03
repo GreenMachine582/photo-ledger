@@ -12,10 +12,13 @@ import uvicorn
 
 from photo_ledger import __version__
 from photo_ledger import sources as source_service
+from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import open_db
 from photo_ledger.errors import PhotoLedgerError
-from photo_ledger.exports import csv_export
+from photo_ledger.exports import csv_export, guard
+from photo_ledger.matching import pairs as pair_matching
+from photo_ledger.matching import reports
 from photo_ledger.scanner import engine
 
 app = typer.Typer(help="Catalogue photo backups, find duplicates and organise them safely.")
@@ -65,6 +68,72 @@ def serve(port: int | None = typer.Option(None, help="Port on 127.0.0.1.")) -> N
     )
 
 
+@app.command()
+def match(
+    threshold: int | None = typer.Option(
+        None,
+        "--threshold",
+        "-t",
+        min=0,
+        max=32,
+        help="Largest pHash distance that counts as similar.",
+    ),
+) -> None:
+    """Find exact duplicates, similar images and name conflicts. Only reads the catalogue."""
+    settings = Settings()
+    limit = settings.photo_ledger_similar_threshold if threshold is None else threshold
+    with catalogue() as conn:
+        collections = refresh_collections(conn, settings.photo_ledger_generic_folders)
+        typer.echo(
+            f"Collections from folder names: {collections.total_collections} "
+            f"({collections.new_collections} new, {collections.new_folders} folders mapped)."
+        )
+        result = pair_matching.match(conn, limit)
+        found = ", ".join(
+            f"{n} {kind.replace('_', ' ')}" for kind, n in sorted(result.by_kind.items())
+        )
+        typer.echo(f"Matched with a similarity threshold of {limit}: {found or 'no pairs'}.")
+        typer.echo(
+            f"{result.new} new, {result.reopened} reopened, {result.needs_review} need review, "
+            f"{result.obsolete} closed, {result.unchanged} unchanged."
+        )
+
+
+@app.command()
+def report(
+    name: str = typer.Argument(
+        "summary", help=f"One of: {', '.join(reports.REPORTS)}.", metavar="NAME"
+    ),
+    scan: str | None = typer.Option(None, "--scan", help="Only what touches this scan's sources."),
+    kind: str | None = typer.Option(None, "--kind", help="pairs: exact, similar or name_conflict."),
+    status: str = typer.Option("open", "--status", help="pairs: a status, or 'all'."),
+    csv_path: Path | None = typer.Option(None, "--csv", help="Write a CSV instead of printing."),
+) -> None:
+    """Show a read-only report: duplicates, mismatches, dates and corrupt files."""
+    if name not in reports.REPORTS:
+        typer.secho(
+            f"Unknown report '{name}'. Choose from: {', '.join(reports.REPORTS)}.", err=True
+        )
+        raise typer.Exit(2)
+    with catalogue() as conn:
+        if name == "pairs":
+            result = reports.pairs_report(
+                conn, scan, kind=kind, status=None if status == "all" else status
+            )
+        else:
+            result = reports.REPORTS[name](conn, scan)
+        if csv_path is not None:
+            count = guard.write_csv(conn, csv_path, result.columns, result.rows)
+            typer.echo(f"Wrote {count} rows to {csv_path}")
+            return
+        typer.echo(f"# {result.title} ({len(result.rows)})")
+        if result.note:
+            typer.echo(f"# {result.note}")
+        typer.echo("	".join(result.columns))
+        for row in result.rows:
+            typer.echo("	".join("" if value is None else str(value) for value in row))
+
+
 # Sources ------------------------------------------------------------------------------------
 
 
@@ -102,6 +171,17 @@ def source_list() -> None:
             typer.echo(
                 f"{row['label']}\t{state}\t{row['source_type']}\t{row['root_path']}\t{volume}"
             )
+
+
+@source_app.command("priority")
+def source_priority(
+    label: str = typer.Argument(..., help="The source to change."),
+    priority: int = typer.Argument(..., help="Higher numbers are preferred as keepers. Default 0."),
+) -> None:
+    """Set how strongly keeper suggestions prefer a source's copies."""
+    with catalogue() as conn:
+        source = source_service.set_priority(conn, label, priority)
+        typer.echo(f"'{source['label']}' now has priority {source['priority']}.")
 
 
 @source_app.command("reconnect")
@@ -199,6 +279,8 @@ def scan_run(
                 "Reconnect them and run the scan again."
             )
         typer.echo(f"Scan '{result.name}' is {result.status}.")
+        if result.status == "complete":
+            typer.echo("Run `photo-ledger match` to find duplicates and similar images.")
 
 
 @scan_app.command("list")

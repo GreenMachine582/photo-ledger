@@ -13,9 +13,11 @@ from photo_ledger.db import open_db
 from photo_ledger.scanner import engine, hashing
 from photo_ledger.scanner.engine import ScanConflict, ScanError, create_scan, run_scan
 
-SUPPORTED_FILES = 10  # JPEG and PNG files in the fixture tree
-CAMERA_SUPPORTED, BACKUP_SUPPORTED = 4, 6
-UNIQUE_CONTENTS = 8
+
+def supported(tree, source=None):
+    """JPEG and PNG files in the fixture tree, or in one of its sources."""
+    counts = tree[1]["supported"]
+    return counts[source] if source else sum(counts.values())
 
 
 def snapshot(root):
@@ -101,8 +103,8 @@ def test_full_scan(db, tree, hashes):
     assert result.status == "complete"
     assert [s.status for s in result.sources] == ["complete", "complete"]
     assert sum(s.seen for s in result.sources) == len(manifest["files"])
-    assert hashes["n"] == SUPPORTED_FILES
-    assert db.execute("SELECT COUNT(*) FROM contents").fetchone()[0] == UNIQUE_CONTENTS
+    assert hashes["n"] == supported(tree)
+    assert db.execute("SELECT COUNT(*) FROM contents").fetchone()[0] == tree[1]["unique_contents"]
     for left, right in manifest["exact_copies"]:
         assert (
             file_row(db, in_source(left))["content_id"]
@@ -137,7 +139,7 @@ def test_a_paused_scan_resumes_to_the_same_catalogue(db, tree, tmp_path, hashes,
         assert result.status == "paused"
         assert runs < 100
     assert runs > 1
-    assert hashes["n"] == SUPPORTED_FILES  # nothing hashed twice across the pauses
+    assert hashes["n"] == supported(tree)  # nothing hashed twice across the pauses
 
     other = open_db(tmp_path / "uninterrupted.db")
     map_tree(other, root, manifest["sources"])
@@ -149,12 +151,12 @@ def test_a_paused_scan_resumes_to_the_same_catalogue(db, tree, tmp_path, hashes,
 def test_an_overlapping_scan_reuses_hashes(db, tree, hashes):
     create_scan(db, "camera only", ["camera"])
     run_scan(db, "camera only")
-    assert hashes["n"] == CAMERA_SUPPORTED
+    assert hashes["n"] == supported(tree, "camera")
 
     result = run_scan(db, "all")
-    assert hashes["n"] == CAMERA_SUPPORTED + BACKUP_SUPPORTED
+    assert hashes["n"] == supported(tree)
     camera = next(s for s in result.sources if s.label == "camera")
-    assert camera.reused == CAMERA_SUPPORTED and camera.hashed == 0
+    assert camera.reused == supported(tree, "camera") and camera.hashed == 0
 
 
 def test_a_rescan_of_unchanged_files_hashes_nothing(db, tree, hashes):
@@ -163,7 +165,7 @@ def test_a_rescan_of_unchanged_files_hashes_nothing(db, tree, hashes):
     result = run_scan(db, "all")
     assert result.status == "complete"
     assert hashes["n"] == 0
-    assert sum(s.reused for s in result.sources) == SUPPORTED_FILES
+    assert sum(s.reused for s in result.sources) == supported(tree)
     assert sum(s.missing + s.moved for s in result.sources) == 0
 
 
@@ -200,7 +202,7 @@ def test_verify_finds_a_change_that_size_and_mtime_hide(db, tree):
     verified = run_scan(db, "all", verify=True)
     camera = next(s for s in verified.sources if s.label == "camera")
     assert camera.content_changes == ["2019/IMG_0002.jpg"]
-    assert camera.hashed == CAMERA_SUPPORTED
+    assert camera.hashed == supported(tree, "camera")
     assert file_row(db, "2019/IMG_0002.jpg")["content_id"] != old_content
     unverified = db.execute(
         "SELECT COUNT(*) FROM files WHERE status != 'unsupported' AND last_verified_at IS NULL"
@@ -374,7 +376,7 @@ def test_a_crashed_run_resumes(db, tree, monkeypatch, hashes):
 
     monkeypatch.setattr(engine._SourceRun, "_hash_one", real)
     assert run_scan(db, "all").status == "complete"
-    assert hashes["n"] == SUPPORTED_FILES
+    assert hashes["n"] == supported(tree)
 
 
 def test_create_scan_checks_its_input(db, tree):
