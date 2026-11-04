@@ -388,3 +388,47 @@ def test_create_scan_checks_its_input(db, tree):
         create_scan(db, "new", [" "])
     with pytest.raises(ScanError, match="no scan"):
         run_scan(db, "nope")
+
+
+def test_removing_a_scan_keeps_the_catalogue(db, tree):
+    from photo_ledger.matching.pairs import match
+    from photo_ledger.scanner.engine import remove_scan
+
+    root, _ = tree
+    run_scan(db, "all")
+    match(db)
+    before = snapshot(root)
+    files, pairs = catalogue(db), db.execute("SELECT COUNT(*) FROM review_pairs").fetchone()[0]
+    remove_scan(db, "all")
+    assert db.execute("SELECT COUNT(*) FROM scans").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM scan_sources").fetchone()[0] == 0
+    assert len(sources.list_sources(db)) == 2
+    assert db.execute("SELECT COUNT(*) FROM review_pairs").fetchone()[0] == pairs
+    kept_ids = (
+        "SELECT COUNT(*) FROM files WHERE last_seen_scan_id IS NOT NULL OR status = 'missing'"
+    )
+    assert db.execute(kept_ids).fetchone()[0] == 0
+    assert len(catalogue(db)) == len(files)
+    assert snapshot(root) == before
+    with pytest.raises(ScanError, match="no scan"):
+        remove_scan(db, "all")
+
+    # A new scan of the same sources hashes nothing it already knows.
+    create_scan(db, "again", ["camera", "backup"])
+    assert run_scan(db, "again").status == "complete"
+
+
+def test_a_running_scan_cannot_be_removed(db, tree):
+    from photo_ledger.scanner.engine import remove_scan
+
+    db.execute("UPDATE scan_sources SET status = 'running', heartbeat_at = ?", (engine.now_ns(),))
+    db.commit()
+    with pytest.raises(ScanError, match="running"):
+        remove_scan(db, "all")
+    # A heartbeat older than the limit is a crashed run, which can go.
+    db.execute(
+        "UPDATE scan_sources SET heartbeat_at = ?",
+        (engine.now_ns() - engine.STALE_AFTER_NS - 1,),
+    )
+    db.commit()
+    remove_scan(db, "all")

@@ -100,6 +100,27 @@ def get_scan(conn: sqlite3.Connection, name: str) -> sqlite3.Row:
     return scan
 
 
+def remove_scan(conn: sqlite3.Connection, name: str) -> sqlite3.Row:
+    """Forget a saved scan: its progress and errors. Its sources, catalogued files, pairs and
+    decisions all stay, as they belong to the catalogue rather than to the scan.
+
+    Nothing is marked missing. A scan that is running now is refused, so a live pass never
+    loses the row it reports to. Returns the removed scan.
+    """
+    scan = get_scan(conn, name)
+    source_ids = [row["source_id"] for row in scan_queries.scan_sources(conn, scan["id"])]
+    live = [
+        claim
+        for claim in scan_queries.live_claims(conn, source_ids, now_ns() - STALE_AFTER_NS)
+        if claim["scan_id"] == scan["id"]
+    ]
+    if live:
+        raise ScanError(f"Scan '{name}' is running. Let it finish or pause it first.")
+    with conn:
+        scan_queries.delete(conn, scan["id"])
+    return scan
+
+
 def list_scans(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return scan_queries.all_scans(conn)
 

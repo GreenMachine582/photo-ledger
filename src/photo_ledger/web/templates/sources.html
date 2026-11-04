@@ -86,7 +86,7 @@
 </form>
 <form method="post" action="/sources/{{ row.id }}/forget" class="mt-4">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  {{ gth_alert("Forgetting removes this source from the ledger: its catalogued files, exact pairs and the decisions on them. The folder and its files stay exactly as they are. A source with files in an applied plan or the library can't be forgotten.", kind="warning") }}
+  {{ gth_alert("Forgetting removes this source from the ledger: its catalogued files, exact pairs and the decisions on them, and its entries in the journals of plans that were undone. The folder and its files stay exactly as they are. A source with files in an applied plan that hasn't been undone, or in the library, can't be forgotten.", kind="warning") }}
   {{ gth_form_field("confirm", "Type " ~ row.label ~ " to confirm", id="forget-confirm-" ~ row.id) }}
   <button type="submit" class="btn btn-outline-danger">Forget this source</button>
 </form>

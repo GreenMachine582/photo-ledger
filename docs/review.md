@@ -60,14 +60,16 @@ else. See [rescans.md](rescans.md).
 
 - **Overview** (`/`): File and photo counts, duplicated space, space marked for the plan by your decisions, and how
   many pairs are open, skipped, needing review and decided. It lists each source with its online state and last scan,
-  and each scan with a link to review it.
+  and each scan with a link to review it, or to remove it once you no longer need it. Removing a scan keeps its
+  sources, catalogued files, pairs and decisions, and asks you to confirm.
 - **Sources** (`/sources`): Map a folder or drive by typing its path and a label. Check whether each source is
   connected, on the volume it was mapped on, one at a time or all at once. Reconnect a source at its new drive letter
   or mount path: leave the path empty to find it by its volume, or type it. The page shows the state from the last
 check and never probes a drive itself, as some drives are slow to answer. Set its keeper priority, and turn its
   quarantine on or off. Rename a source, or forget it: forgetting removes its catalogued files, its exact pairs and
   the decisions on them from the ledger, and leaves the folder as it is. Type its label to confirm. A source with files
-  in an applied plan or copied into the library can't be forgotten, as undo and the library rely on that history. It's
+  in an applied plan can be forgotten only once that plan is undone, and its rows in the undone journals go with it. A
+  source with files copied into the library can't be forgotten while that library is current. It's
   the same as `photo-ledger source`, with the same refusals: overlapping folders, a different drive, or a quarantine
   inside a source. The page stores only paths you type, and never browses, serves or
   changes a folder. Creating and running scans stays on the command line.
@@ -82,6 +84,11 @@ plan** appears only after a clean recorded dry run, and asks you to confirm. Und
 (`photo-ledger undo`). Bulk
   actions apply to exact duplicates only, and always go through this page. `photo-ledger plan` does the same from the
   command line.
+- **Library** (`/library`): Choose the library's folder and its `year` or `original` layout, then **Plan** and
+  **Build**, the same as `photo-ledger library`. The page shows whether the folder is connected, how many pictures are
+  built, planned and waiting for review, the read-only dry-run problems, failed copies and pictures no longer chosen.
+  **Build** appears only when something is planned and the dry run is clean, and asks you to confirm. Choosing a new
+  folder starts a new, empty library and leaves the old folder as it is.
 
 ## Building it
 

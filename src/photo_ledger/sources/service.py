@@ -239,9 +239,10 @@ def forget_usage(conn: sqlite3.Connection, label: str) -> dict[str, int]:
 def forget_source(conn: sqlite3.Connection, label: str) -> dict[str, int]:
     """Remove a source from the ledger: its catalogued files, exact pairs and their decisions.
 
-    The folder itself is never touched. A source whose files are in an applied plan or a built
-    library copy is refused, as that history is what undo and the library rely on. Returns what
-    was removed.
+    The folder itself is never touched. A source whose files are in an applied or incomplete plan,
+    or in a built library copy, is refused, as that history is what undo, recovery and the library
+    rely on. Once every plan that touched it has been undone, its rows in those journals are
+    removed with it. Returns what was removed.
     """
     from photo_ledger.matching.pairs import match
     from photo_ledger.review.decisions import forget_pairs
@@ -253,10 +254,13 @@ def forget_source(conn: sqlite3.Connection, label: str) -> dict[str, int]:
     if usage["plan_actions"]:
         raise SourceError(
             f"'{label}' has files in an applied plan. Its journal is what undo relies on, so "
-            "the source can't be forgotten."
+            "the source can't be forgotten until that plan is undone."
         )
     if usage["library_entries"]:
-        raise SourceError(f"'{label}' has files copied into the library, so it can't be forgotten.")
+        raise SourceError(
+            f"'{label}' has files copied into the library, so it can't be forgotten. Choosing a "
+            "new library folder starts a new library and leaves the old one as it is."
+        )
     with conn:
         pair_ids = queries.exact_pair_ids(conn, source["id"])
         forget_pairs(conn, pair_ids)

@@ -31,21 +31,40 @@ class LibraryPlan:
     no_longer_chosen: list[str] = field(default_factory=list)
 
 
-def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
-    library = get_library(conn)
+def _assess(
+    conn: sqlite3.Connection,
+) -> tuple[LibraryPlan, selection.Selection, dict[int, sqlite3.Row]]:
+    """The plan's numbers, the settled pictures and the entries with a file in the library."""
+    get_library(conn)
     picked = selection.settled_pictures(conn)
-    layout = Layout(conn, library["layout"])
-    dates = capture_dates(conn)
+    kept = {row["content_id"]: row for row in queries.entries(conn, "started", "done")}
     result = LibraryPlan(
         waiting=len(picked.waiting), rejected=picked.rejected, corrupt=picked.corrupt
     )
+    for content_id, row in kept.items():
+        if content_id not in picked.chosen:
+            result.no_longer_chosen.append(row["rel_path"])
+    for content_id, chosen in picked.chosen.items():
+        if content_id not in kept:
+            result.to_copy += 1
+            result.to_copy_bytes += chosen["size_bytes"]
+    result.already = sum(1 for row in kept.values() if row["state"] == "done")
+    return result, picked, kept
+
+
+def preview(conn: sqlite3.Connection) -> LibraryPlan:
+    """What planning would find now, without writing anything, even to the catalogue."""
+    return _assess(conn)[0]
+
+
+def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
+    library = get_library(conn)
+    result, picked, kept = _assess(conn)
+    layout = Layout(conn, library["layout"])
+    dates = capture_dates(conn)
     with conn:
         queries.forget_unbuilt(conn)
-        kept = {row["content_id"]: row for row in queries.entries(conn)}
         used = {row["rel_path"].casefold() for row in kept.values()}
-        for content_id, row in kept.items():
-            if content_id not in picked.chosen:
-                result.no_longer_chosen.append(row["rel_path"])
         new = [
             (layout.path_for(chosen, _taken(dates, content_id)), content_id, chosen)
             for content_id, chosen in picked.chosen.items()
@@ -61,9 +80,6 @@ def plan_library(conn: sqlite3.Connection) -> LibraryPlan:
                 expected_blake3=chosen["blake3"],
                 size_bytes=chosen["size_bytes"],
             )
-            result.to_copy += 1
-            result.to_copy_bytes += chosen["size_bytes"]
-        result.already = sum(1 for row in kept.values() if row["state"] == "done")
     return result
 
 

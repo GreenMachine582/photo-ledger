@@ -76,7 +76,9 @@ photo-ledger library plan     # preview and dry-run the build
 photo-ledger library build    # copy, verified by hash, with an XMP sidecar beside each file
 ```
 
-Sources can also be mapped, checked and reconnected on the Sources page at <http://127.0.0.1:8765/sources>.
+Sources can also be mapped, checked and reconnected on the Sources page at <http://127.0.0.1:8765/sources>, and the
+library set, planned and built on the Library page at <http://127.0.0.1:8765/library>. A saved scan you no longer need
+can be removed from the Overview page, or with `photo-ledger scan remove <name>`.
 
 To try it without real photos, `python scripts/make_fixtures.py <empty-folder>` generates a test tree.
 

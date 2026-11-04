@@ -65,6 +65,16 @@ def rename(conn: sqlite3.Connection, source_id: int, label: str) -> None:
     conn.execute("UPDATE sources SET label = ? WHERE id = ?", (label, source_id))
 
 
+#: Plans whose files are back where they started: an undone plan, and the undo that reversed it.
+#: Their journals are history only, as there is nothing left to undo or recover.
+SETTLED_PLANS = """
+    SELECT id FROM plans WHERE status = 'undone'
+    UNION
+    SELECT id FROM plans WHERE status = 'applied'
+      AND undoes_plan_id IN (SELECT id FROM plans WHERE status = 'undone')
+"""
+
+
 def usage(conn: sqlite3.Connection, source_id: int) -> dict[str, int]:
     """How much of the ledger refers to a source's files: what forgetting it would touch."""
     files = "SELECT id FROM files WHERE source_id = :id"
@@ -74,7 +84,10 @@ def usage(conn: sqlite3.Connection, source_id: int) -> dict[str, int]:
             SELECT
               (SELECT COUNT(*) FROM files WHERE source_id = :id) AS files,
               (SELECT COUNT(*) FROM plan_actions a JOIN plans p ON p.id = a.plan_id
-                 WHERE p.status != 'draft' AND a.file_id IN ({files})) AS plan_actions,
+                 WHERE p.status != 'draft' AND p.id NOT IN ({SETTLED_PLANS})
+                   AND a.file_id IN ({files})) AS plan_actions,
+              (SELECT COUNT(*) FROM plan_actions WHERE plan_id IN ({SETTLED_PLANS})
+                 AND file_id IN ({files})) AS undone_plan_actions,
               (SELECT COUNT(*) FROM library_entries WHERE state IN ('started', 'done')
                  AND file_id IN ({files})) AS library_entries,
               (SELECT COUNT(*) FROM scan_sources WHERE source_id = :id AND status = 'running')
@@ -109,10 +122,26 @@ def delete(conn: sqlite3.Connection, source_id: int) -> None:
     """Remove a source's catalogue rows and the source. Its pairs must be gone already.
 
     Unapplied drafts and unbuilt library entries are dropped too: they're rebuilt from the
-    catalogue the next time you plan, so nothing is lost.
+    catalogue the next time you plan, so nothing is lost. So are its rows in the journals of
+    undone plans and their undos, which nothing reads again, and any such plan left empty. A
+    live plan's journal is never touched: the caller refuses the source first.
     """
     files = "SELECT id FROM files WHERE source_id = ?"
     conn.execute("DELETE FROM plans WHERE status = 'draft'")
+    conn.execute(
+        f"DELETE FROM plan_actions WHERE plan_id IN ({SETTLED_PLANS}) AND file_id IN ({files})",
+        (source_id,),
+    )
+    # Undo plans first, as nothing cascades from the plan they point at.
+    empty = (
+        f"id IN ({SETTLED_PLANS})"
+        " AND NOT EXISTS (SELECT 1 FROM plan_actions a WHERE a.plan_id = plans.id)"
+    )
+    conn.execute(f"DELETE FROM plans WHERE undoes_plan_id IS NOT NULL AND {empty}")
+    conn.execute(
+        f"DELETE FROM plans WHERE status = 'undone' AND {empty}"
+        " AND id NOT IN (SELECT undoes_plan_id FROM plans WHERE undoes_plan_id IS NOT NULL)"
+    )
     conn.execute(
         "DELETE FROM library_entries WHERE state IN ('pending', 'failed')"
         f" AND file_id IN ({files})",
