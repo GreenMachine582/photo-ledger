@@ -23,7 +23,9 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `exports/` | CSV, JSON, XMP sidecars and the optional Immich export | M1, M5, M6 |
 
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers
-`source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library`, `date` and `export`.
+`source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library`, `date` and `export`. The browser
+covers the same sources, review, plan and library steps, and removing a saved scan. Creating and running scans stays
+on the command line.
 
 Runtime data lives outside the repo, in the OS application data folder from `platformdirs`: `photo-ledger.db`,
 thumbnails and logs. Besides the GTH packages, the dependencies are `fastapi`, `uvicorn`, `typer` and `platformdirs`,

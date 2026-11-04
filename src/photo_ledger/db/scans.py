@@ -116,3 +116,13 @@ def walk_error_paths(
         (scan_id, source_id, since_ns),
     )
     return [row[0] for row in rows]
+
+
+def by_id(conn: sqlite3.Connection, scan_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+
+
+def delete(conn: sqlite3.Connection, scan_id: int) -> None:
+    """Remove a saved scan. Its progress and errors cascade, and files and pairs keep their rows,
+    with the scan IDs that named it set to NULL by the foreign keys."""
+    conn.execute("DELETE FROM scans WHERE id = ?", (scan_id,))

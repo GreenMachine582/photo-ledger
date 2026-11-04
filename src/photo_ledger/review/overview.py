@@ -71,7 +71,7 @@ def overview(conn: sqlite3.Connection) -> Overview:
         )
     for scan in conn.execute(
         """
-        SELECT s.name, s.status, group_concat(src.label, ', ') AS labels
+        SELECT s.id, s.name, s.status, group_concat(src.label, ', ') AS labels
         FROM scans s JOIN scan_sources ss ON ss.scan_id = s.id
         JOIN sources src ON src.id = ss.source_id
         GROUP BY s.id ORDER BY s.created_at

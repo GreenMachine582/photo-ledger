@@ -3,10 +3,14 @@
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "empty_state.html" import gth_empty_state %}
+{% from "form.html" import gth_csrf_field %}
+{% from "toast.html" import gth_alert %}
+{% from "modal.html" import gth_modal %}
 {% set page_title = "Overview" %}
 {% set page_subtitle = "Catalogue backups, find duplicates and organise them safely." %}
 
 {% block page %}
+{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 {% if not data.sources %}
 {% call gth_empty_state("No sources mapped yet. Map one on the Sources page, or with `photo-ledger source add <path> --label <name>`, then scan it.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
 {% else %}
@@ -33,9 +37,23 @@
     <td>{{ row.name }}</td>
     <td>{{ row.status }}</td>
     <td>{{ row.labels }}</td>
-    <td><a href="/review?scan={{ row.name|urlencode }}">Review this scan</a></td>
+    <td class="text-end text-nowrap">
+      <a href="/review?scan={{ row.name|urlencode }}">Review this scan</a>
+      <button type="button" class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#remove-scan-{{ row.id }}">Remove</button>
+    </td>
   </tr>
   {% endcall %}
 {% endcall %}
+
+{% for row in data.scans %}
+{% call gth_modal("remove-scan-" ~ row.id, title="Remove scan " ~ row.name ~ "?") %}
+<p>This forgets the saved scan and its progress. Its sources, catalogued files, pairs and decisions stay, nothing is marked missing and nothing on disk changes. A running scan can't be removed.</p>
+<form method="post" action="/scans/{{ row.id }}/remove" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Remove scan</button>
+</form>
+{% endcall %}
+{% endfor %}
 {% endif %}
 {% endblock %}

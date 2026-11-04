@@ -288,3 +288,63 @@ def test_forget_is_refused_while_history_needs_the_files(ledger):
     sources.forget_source(conn, "camera")
     assert _count(conn, "SELECT COUNT(*) FROM plans") == 0
     assert _count(conn, "SELECT COUNT(*) FROM library_entries") == 0
+
+
+def test_forget_after_undo_drops_only_its_journal_rows(ledger):
+    from plan_helpers import quarantine, reject_backup_copy, reject_two_of_three
+
+    from photo_ledger.actions import dryrun, executor, planner
+
+    conn, root, _ = ledger
+    quarantine(conn, root, "backup")
+    reject_backup_copy(conn)
+    reject_two_of_three(conn)
+    plan_id = planner.build_plan(conn).plan_id
+    assert dryrun.dry_run(conn, plan_id).ok
+    assert executor.apply(conn).status == "applied"
+    with pytest.raises(sources.SourceError, match="until that plan is undone"):
+        sources.forget_source(conn, "backup")
+
+    assert executor.undo(conn).status == "applied"
+    undo_row = conn.execute("SELECT id FROM plans WHERE undoes_plan_id = ?", (plan_id,))
+    undo_id = undo_row.fetchone()[0]
+    # Another source's row in the same undone journal must outlive the forgotten source.
+    conn.execute(
+        "INSERT INTO plan_actions (plan_id, file_id, op, from_path, to_path, quarantine_root,"
+        " expected_blake3, size_bytes, state) VALUES (?, ?, 'quarantine', 'a', 'b', 'q', 'x', 1,"
+        " 'done')",
+        (plan_id, file_id(conn, F_CAMERA)),
+    )
+    conn.commit()
+    backup_id = sources.get_source(conn, "backup")["id"]
+    usage = sources.forget_usage(conn, "backup")
+    assert usage["plan_actions"] == 0 and usage["undone_plan_actions"] == 6
+    assert sources.forget_usage(conn, "camera")["plan_actions"] == 0
+
+    before = snapshot(root)
+    sources.forget_source(conn, "backup")
+    assert _count(conn, "SELECT COUNT(*) FROM files WHERE source_id = ?", backup_id) == 0
+    assert _count(conn, "SELECT COUNT(*) FROM plans WHERE id = ?", undo_id) == 0
+    assert _count(conn, "SELECT COUNT(*) FROM plans WHERE id = ?", plan_id) == 1
+    assert _count(conn, "SELECT COUNT(*) FROM plan_actions") == 1
+    assert snapshot(root) == before
+
+
+def test_forget_after_choosing_a_new_library_folder(ledger):
+    from photo_ledger.library import settings as library_settings
+
+    conn, root, _ = ledger
+    for name in ("library", "library-2"):
+        (root.parent / name).mkdir()
+    library_settings.set_library(conn, root.parent / "library")
+    conn.execute(
+        "INSERT INTO library_entries (content_id, file_id, rel_path, expected_blake3, size_bytes,"
+        " state) SELECT content_id, id, 'x.jpg', 'x', 1, 'done' FROM files WHERE id = ?",
+        (file_id(conn, F_CAMERA),),
+    )
+    conn.commit()
+    with pytest.raises(sources.SourceError, match="new library folder"):
+        sources.forget_source(conn, "camera")
+    library_settings.set_library(conn, root.parent / "library-2")
+    sources.forget_source(conn, "camera")
+    assert (root.parent / "library").is_dir()

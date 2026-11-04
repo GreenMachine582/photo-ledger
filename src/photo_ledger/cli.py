@@ -480,7 +480,13 @@ def source_forget(
         if not yes:
             typer.confirm(
                 f"Forget '{label}': {usage['files']} catalogued files, {usage['pairs']} exact "
-                f"pairs and {usage['decisions']} decisions on them? The folder isn't touched.",
+                f"pairs and {usage['decisions']} decisions on them"
+                + (
+                    f", and {usage['undone_plan_actions']} entries in undone plans' journals"
+                    if usage["undone_plan_actions"]
+                    else ""
+                )
+                + "? The folder isn't touched.",
                 abort=True,
             )
         source_service.forget_source(conn, label)
@@ -566,6 +572,23 @@ def scan_list() -> None:
                 f"{row['name']}	{row['status']}	{row['source_labels']}"
                 f"	{(row['last_opened_at'] or '-')[:19]}"
             )
+
+
+@scan_app.command("remove")
+def scan_remove(
+    name: str = typer.Argument(..., help="The saved scan to remove."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Remove a saved scan. Its sources, catalogued files and decisions all stay."""
+    with catalogue() as conn:
+        engine.get_scan(conn, name)
+        if not yes:
+            typer.confirm(
+                f"Remove scan '{name}'? Its sources, catalogued files and decisions stay.",
+                abort=True,
+            )
+        engine.remove_scan(conn, name)
+        typer.echo(f"Removed scan '{name}'. Nothing on disk changed.")
 
 
 @scan_app.command("status")

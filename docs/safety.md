@@ -20,6 +20,7 @@ a journal entry is written before and after each operation.
 | Quarantine | Off by default. Turned on per source with `source quarantine <label> <folder>`, on any device, and suggested on the same volume because that's faster. The folder must already exist and sit outside every source, and no source can be mapped inside it |
 | Interrupted plan | `recovery.py` runs before `apply`, `undo` and `serve`. For each `started` action it removes any partial copy, then checks both paths: original verified and no destination means retry, destination verified and no original means done, both verified means finish the move, and anything else is marked failed with both files left alone. An action whose source or quarantine is unplugged waits |
 | Undo | A plan of its own, with `restore` actions in reverse order through the same executor. Each quarantined file is verified first, and a file created since at the original path is never overwritten. If the quarantine is offline, undo names it |
+| Forgetting a source | Its journal rows are removed only from plans that were undone, and from the undo plans that reversed them. A source in a plan that could still be undone or recovered can't be forgotten |
 
 By default, nothing leaves an original backup: approved keepers are copied into the destination library. The library
 must sit outside every source and quarantine. Each picture is copied the verified way: a partial file, fsync, a hash

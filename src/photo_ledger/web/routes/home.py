@@ -11,9 +11,17 @@ from photo_ledger.web.deps import get_db, render
 
 router = APIRouter()
 
+#: Results are shown from this fixed list, never from text in the URL.
+NOTICES = {
+    "scan-removed": "Scan removed. Its sources, catalogued files and decisions stay, and nothing "
+    "on disk changed.",
+}
+
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
+def home(
+    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
+) -> HTMLResponse:
     data = overview(conn)
     cards = [
         {"label": "Files", "value": f"{data.files:,}"},
@@ -29,4 +37,8 @@ def home(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLRe
         {"label": "Needs review", "value": f"{data.pairs.get('needs_review', 0):,}"},
         {"label": "Decided", "value": f"{data.pairs.get('resolved', 0):,}"},
     ]
-    return render(request, "overview.html", {"data": data, "cards": cards})
+    return render(
+        request,
+        "overview.html",
+        {"data": data, "cards": cards, "notice": NOTICES.get(notice or "")},
+    )

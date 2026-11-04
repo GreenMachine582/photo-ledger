@@ -28,8 +28,13 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 - **Paths:** Stored relative to `sources.root_path`, so a source can move to a new drive letter or mount path.
 - **Forgetting a source:** Deletes its `files`, `scan_sources`, `scan_errors` and `collection_folders` rows, its exact
   pairs and their decisions, after reverting the closures those decisions caused on other pairs. Contents, scans and
-  date fixes stay. Unapplied draft plans and unbuilt library entries go too, as they're rebuilt when you next plan. It's
-  refused while an applied plan or a built library copy refers to its files.
+  date fixes stay. Unapplied draft plans and unbuilt library entries go too, as they're rebuilt when you next plan. So
+  do its `plan_actions` in plans that were undone and in the undo plans that reversed them, and any such plan left
+  empty, as nothing reads those journals again. It's refused while an applied, applying or incomplete plan that
+  hasn't been undone, or a built library copy, refers to its files.
+- **Removing a scan:** Deletes the `scans` row. Its `scan_sources` and `scan_errors` rows cascade, and
+  `first_seen_scan_id` and `last_seen_scan_id` on `files` and `review_pairs` become NULL. Sources, files, pairs and
+  decisions stay. It's refused while the scan is running.
 - **Indexes:** Unique on `files(source_id, rel_path)`, `contents(blake3)` and `review_pairs(pair_key)`, plus indexes on
   `size_bytes`, `filename` and `captured_at`.
 - **File status:** `present`, `missing`, `unsupported`, `corrupt`, `unreadable` or `changed_during_scan`. An EXIF failure
