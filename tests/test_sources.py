@@ -1,8 +1,12 @@
 import sys
 
 import pytest
+from plan_helpers import F_BEST, F_CAMERA, F_JAPAN
+from review_helpers import exact_pair, file_id, keep, status
+from test_scanner import snapshot
 
 from photo_ledger import sources
+from photo_ledger.review.decisions import decide
 from photo_ledger.sources import device
 from photo_ledger.sources.device import DeviceInfo
 from photo_ledger.sources.service import overlaps
@@ -189,3 +193,98 @@ def test_quarantine_offline_when_its_folder_is_gone(db, tmp_path):
     source, _ = sources.set_quarantine(db, "a", tmp_path / "q")
     (tmp_path / "q").rename(tmp_path / "q-moved")
     assert not sources.quarantine_online(source)
+
+
+# Rename and forget ---------------------------------------------------------------------------
+
+
+def _count(conn, query, *params):
+    return conn.execute(query, params).fetchone()[0]
+
+
+def test_rename_changes_only_the_label(db, tmp_path):
+    (tmp_path / "usb").mkdir()
+    (tmp_path / "pc").mkdir()
+    sources.add_source(db, tmp_path / "usb", "usb")
+    sources.add_source(db, tmp_path / "pc", "pc")
+    renamed = sources.rename_source(db, "usb", "usb-2014")
+    assert renamed["label"] == "usb-2014"
+    assert renamed["root_path"] == str((tmp_path / "usb").resolve())
+    assert sources.rename_source(db, "usb-2014", "usb-2014")["label"] == "usb-2014"
+    with pytest.raises(sources.SourceError, match="already exists"):
+        sources.rename_source(db, "usb-2014", "pc")
+    with pytest.raises(sources.SourceError, match="Labels"):
+        sources.rename_source(db, "usb-2014", "a/b")
+    with pytest.raises(sources.SourceError, match="no source"):
+        sources.rename_source(db, "usb", "other")
+
+
+def test_forget_removes_the_source_and_reopens_what_it_closed(ledger):
+    conn, root, _ = ledger
+    before = snapshot(root / "camera")
+    # Keeping the camera copy of F rejects the "Best of" backup copy, which closes the pair
+    # between the two backup copies. That pair outlives the camera source, so it must reopen.
+    best_vs_camera = exact_pair(conn, F_BEST, F_CAMERA)
+    backups = exact_pair(conn, F_BEST, F_JAPAN)
+    decide(conn, best_vs_camera["id"], keep(best_vs_camera, file_id(conn, F_CAMERA)))
+    assert status(conn, backups["id"]) == "resolved"
+
+    usage = sources.forget_usage(conn, "camera")
+    assert usage["files"] > 0 and usage["pairs"] == 4 and usage["decisions"] == 1
+    camera_id = sources.get_source(conn, "camera")["id"]
+    sources.forget_source(conn, "camera")
+
+    assert _count(conn, "SELECT COUNT(*) FROM sources WHERE label = 'camera'") == 0
+    assert _count(conn, "SELECT COUNT(*) FROM files WHERE source_id = ?", camera_id) == 0
+    assert status(conn, backups["id"]) == "open"
+    assert _count(conn, "SELECT COUNT(*) FROM decisions") == 0
+    assert _count(conn, "SELECT COUNT(*) FROM review_pairs WHERE kind = 'exact'") == 1
+    # A content pair left with no copies on one side closes, as after any match.
+    stranded = conn.execute(
+        "SELECT p.status FROM review_pairs p WHERE p.kind != 'exact' AND NOT ("
+        " EXISTS (SELECT 1 FROM files WHERE content_id = p.left_id)"
+        " AND EXISTS (SELECT 1 FROM files WHERE content_id = p.right_id))"
+    ).fetchall()
+    assert stranded and {row[0] for row in stranded} == {"obsolete"}
+    assert snapshot(root / "camera") == before
+    sources.add_source(conn, root / "camera", "camera")  # the folder can be mapped again
+
+
+def test_forget_is_refused_while_history_needs_the_files(ledger):
+    conn, _, _ = ledger
+    camera_file = file_id(conn, F_CAMERA)
+    conn.execute("INSERT INTO plans (status, created_at) VALUES ('draft', 'now')")
+    conn.execute("INSERT INTO plans (status, created_at) VALUES ('applied', 'now')")
+    for plan_id in (1, 2):
+        conn.execute(
+            "INSERT INTO plan_actions (plan_id, file_id, op, from_path, to_path, quarantine_root,"
+            " expected_blake3, size_bytes) VALUES (?, ?, 'quarantine', 'a', 'b', 'q', 'x', 1)",
+            (plan_id, camera_file),
+        )
+    conn.commit()
+    with pytest.raises(sources.SourceError, match="applied plan"):
+        sources.forget_source(conn, "camera")
+
+    conn.execute("DELETE FROM plans WHERE status = 'applied'")
+    conn.execute(
+        "INSERT INTO library_entries (content_id, file_id, rel_path, expected_blake3, size_bytes,"
+        " state) SELECT content_id, id, 'x.jpg', 'x', 1, 'done' FROM files WHERE id = ?",
+        (camera_file,),
+    )
+    conn.commit()
+    with pytest.raises(sources.SourceError, match="library"):
+        sources.forget_source(conn, "camera")
+
+    conn.execute("UPDATE library_entries SET state = 'pending'")
+    conn.execute("UPDATE scan_sources SET status = 'running'")
+    conn.commit()
+    with pytest.raises(sources.SourceError, match="being scanned"):
+        sources.forget_source(conn, "camera")
+
+    # A draft plan and an unbuilt library entry are rebuilt next time, so they don't stand in
+    # the way.
+    conn.execute("UPDATE scan_sources SET status = 'complete'")
+    conn.commit()
+    sources.forget_source(conn, "camera")
+    assert _count(conn, "SELECT COUNT(*) FROM plans") == 0
+    assert _count(conn, "SELECT COUNT(*) FROM library_entries") == 0

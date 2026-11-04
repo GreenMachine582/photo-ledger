@@ -4,6 +4,8 @@ from photo_ledger.sources.service import (
     SourceError,
     add_source,
     find_new_root,
+    forget_source,
+    forget_usage,
     get_source,
     is_online,
     list_sources,
@@ -11,6 +13,7 @@ from photo_ledger.sources.service import (
     quarantine_online,
     reconnect,
     refresh_state,
+    rename_source,
     set_priority,
     set_quarantine,
 )
@@ -19,6 +22,8 @@ __all__ = [
     "SourceError",
     "add_source",
     "find_new_root",
+    "forget_source",
+    "forget_usage",
     "get_source",
     "is_online",
     "list_sources",
@@ -26,6 +31,7 @@ __all__ = [
     "quarantine_online",
     "reconnect",
     "refresh_state",
+    "rename_source",
     "set_priority",
     "set_quarantine",
 ]

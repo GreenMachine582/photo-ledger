@@ -53,7 +53,14 @@ with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `h
 `web/app.py` calls `register_logging`, `register_core`, `register_health`, `register_csrf`,
 `register_exception_handlers` and `register_error_pages`. It skips `register_auth` and `register_permissions`, because
 the app has one user on `127.0.0.1` and nothing needs sign-in. SQLite stays on `sqlite3`, which the GTH packages don't
-replace. Pins and upgrades are covered in [CONTRIBUTING.md](../CONTRIBUTING.md#-gth-pins).
+replace.
+
+GTH's permissions are role-based and defined in code: `Permission("resource.action")` and `Role` in greentechhub-core,
+and `require_permission` added to each route in greentechhub-fastapi. Only role membership is data (`ROLE_GROUPS`,
+`ROLE_BOOTSTRAP` and the grants table). There's no rules file like Odoo's `ir.model.access.csv`, and no record rules
+beyond `get_owned_or_404`. A rules file would protect nothing here, so the gate stays CSRF on every state-changing route,
+the local-origin check and the trusted hosts. If the app ever had more than one user, it would use GTH's roles as they
+are, not a rules file. Pins and upgrades are covered in [CONTRIBUTING.md](../CONTRIBUTING.md#-gth-pins).
 
 ## Settled questions
 
@@ -69,3 +76,4 @@ replace. Pins and upgrades are covered in [CONTRIBUTING.md](../CONTRIBUTING.md#-
 | Should the app support multiple libraries? | No: one database with many sources |
 | Should a scan's review include matches in other sources? | Yes, and resolving a pair resolves it in every scan |
 | Should you be able to declare that sources are meant to hold the same files? | No |
+| Should permissions come from a rules file, deny by default? | No: one local user. GTH's code-defined roles if that ever changes |

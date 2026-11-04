@@ -1,4 +1,4 @@
-"""The sources page: map, check and reconnect sources, and set their priority and quarantine.
+"""The sources page: map, check, reconnect, rename and forget sources, and set their settings.
 
 Everything goes through ``sources.service``, the same as the CLI. The page only stores paths you
 type: it never browses folders, never serves a file and never writes to a source.
@@ -29,6 +29,8 @@ NOTICES = {
     "quarantine-far": "Quarantine is on, on another device. Moves will copy and verify each file, "
     "so a folder on the source's own drive would be faster.",
     "quarantine-off": "Quarantine is off. Rejected copies stay where they are.",
+    "renamed": "Renamed. Nothing on disk changed.",
+    "forgotten": "Forgotten. Its folder is unchanged: map it again to bring it back.",
 }
 
 
@@ -143,3 +145,22 @@ def quarantine(
         raise service.SourceError("Type the quarantine folder, or turn quarantine off.")
     _source, same_volume = service.set_quarantine(conn, label, Path(path.strip()))
     return _done("quarantine-far" if same_volume is False else "quarantine-on")
+
+
+@router.post("/{source_id}/rename", dependencies=[Depends(require_csrf)])
+def rename(
+    source_id: int, label: str = Form(...), conn: sqlite3.Connection = Depends(get_db)
+) -> RedirectResponse:
+    service.rename_source(conn, _label(conn, source_id), label.strip())
+    return _done("renamed")
+
+
+@router.post("/{source_id}/forget", dependencies=[Depends(require_csrf)])
+def forget(
+    source_id: int, confirm: str = Form(""), conn: sqlite3.Connection = Depends(get_db)
+) -> RedirectResponse:
+    label = _label(conn, source_id)
+    if confirm.strip() != label:
+        raise service.SourceError(f"Type '{label}' to confirm forgetting it.")
+    service.forget_source(conn, label)
+    return _done("forgotten")

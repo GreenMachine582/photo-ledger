@@ -458,6 +458,35 @@ def source_reconnect(
         typer.echo(f"'{label}' now points at {updated['root_path']}")
 
 
+@source_app.command("rename")
+def source_rename(
+    label: str = typer.Argument(..., help="The source to rename."),
+    new_label: str = typer.Argument(..., help="Its new label."),
+) -> None:
+    """Give a source a new label. Nothing on disk changes."""
+    with catalogue() as conn:
+        source = source_service.rename_source(conn, label, new_label)
+        typer.echo(f"'{label}' is now '{source['label']}'.")
+
+
+@source_app.command("forget")
+def source_forget(
+    label: str = typer.Argument(..., help="The source to remove from the ledger."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask for confirmation."),
+) -> None:
+    """Remove a source from the ledger. Its folder and files are left exactly as they are."""
+    with catalogue() as conn:
+        usage = source_service.forget_usage(conn, label)
+        if not yes:
+            typer.confirm(
+                f"Forget '{label}': {usage['files']} catalogued files, {usage['pairs']} exact "
+                f"pairs and {usage['decisions']} decisions on them? The folder isn't touched.",
+                abort=True,
+            )
+        source_service.forget_source(conn, label)
+        typer.echo(f"Forgot '{label}'. Its folder is unchanged; map it again to bring it back.")
+
+
 # Scans --------------------------------------------------------------------------------------
 
 

@@ -59,6 +59,17 @@ def test_source_commands(tmp_path, monkeypatch):
     assert off.exit_code == 0, off.output
     assert "quarantine" not in runner.invoke(cli.app, ["source", "list"]).stdout
 
+    renamed = runner.invoke(cli.app, ["source", "rename", "pc", "old-pc"])
+    assert renamed.exit_code == 0, renamed.output
+    assert "old-pc\tonline" in runner.invoke(cli.app, ["source", "list"]).stdout
+    kept = runner.invoke(cli.app, ["source", "forget", "old-pc"], input="n\n")
+    assert kept.exit_code == 1
+    assert "The folder isn't touched" in kept.output
+    forgot = runner.invoke(cli.app, ["source", "forget", "old-pc", "--yes"])
+    assert forgot.exit_code == 0, forgot.output
+    assert "old-pc" not in runner.invoke(cli.app, ["source", "list"]).stdout
+    assert (tmp_path / "moved").is_dir()
+
 
 def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     root, manifest = fixture_tree
