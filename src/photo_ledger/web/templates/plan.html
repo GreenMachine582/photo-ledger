@@ -10,8 +10,39 @@
 
 {% block page %}
 {% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
-{% if unfinished %}{{ gth_alert("Plan " ~ unfinished.id ~ " didn't finish. Run `photo-ledger apply` to finish it, or `photo-ledger undo` to put its files back.", kind="warning") }}{% endif %}
-{% if last_applied %}<p class="text-body-secondary">Plan {{ last_applied.id }} was applied. Undo it from the command line with <code>photo-ledger undo</code>.</p>{% endif %}
+{% if unfinished %}{{ gth_alert("Plan " ~ unfinished.id ~ " didn't finish. Finish it to retry the moves that are left, or undo it to put back the files it moved.", kind="warning") }}{% endif %}
+{% if unfinished_undo %}{{ gth_alert("Undoing plan " ~ unfinished_undo.undoes_plan_id ~ " didn't finish. Finish the undo to put back the files that are left.", kind="warning") }}{% endif %}
+
+{% if unfinished or unfinished_undo or undoable %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  {% if unfinished %}
+  <form method="post" action="/plan/apply">
+    {{ gth_csrf_field(csrf_token|default(none)) }}
+    <button type="submit" class="btn btn-warning">Finish plan {{ unfinished.id }}</button>
+  </form>
+  {% endif %}
+  {% if unfinished_undo %}
+  <form method="post" action="/plan/undo">
+    {{ gth_csrf_field(csrf_token|default(none)) }}
+    <button type="submit" class="btn btn-warning">Finish the undo</button>
+  </form>
+  {% elif undoable %}
+  {% if not unfinished %}<span class="text-body-secondary">Plan {{ undoable.id }} was applied{% if undoable.applied_at %} on {{ undoable.applied_at[:16]|replace("T", " ") }}{% endif %}.</span>{% endif %}
+  <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#undo-plan">Undo plan {{ undoable.id }}</button>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if undoable and not unfinished_undo %}
+{% call gth_modal("undo-plan", title="Undo plan " ~ undoable.id ~ "?", static_backdrop=True) %}
+<p>Every file plan {{ undoable.id }} moved goes back where it came from. Each one is verified by its hash first, and a file created since at its old place is never overwritten. Its quarantine must be connected.</p>
+<form method="post" action="/plan/undo" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Undo</button>
+</form>
+{% endcall %}
+{% endif %}
 {% if stale %}{{ gth_alert("You've made decisions since this plan was built. Rebuild it before applying.", kind="warning") }}{% endif %}
 
 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -32,7 +63,7 @@
 
 {% if can_apply %}
 {% call gth_modal("apply-plan", title="Apply this plan?", static_backdrop=True) %}
-<p>{{ actions|length }} rejected copies move to quarantine. Each is verified by its hash before it moves, nothing is overwritten and nothing is deleted. Undo puts them back with <code>photo-ledger undo</code>.</p>
+<p>{{ actions|length }} rejected copies move to quarantine. Each is verified by its hash before it moves, nothing is overwritten and nothing is deleted. Undo, on this page, puts them back.</p>
 <form method="post" action="/plan/apply" class="d-flex justify-content-end gap-2">
   {{ gth_csrf_field(csrf_token|default(none)) }}
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -42,7 +73,7 @@
 {% endif %}
 
 {% if stay %}
-<p class="text-body-secondary">{{ stay }} rejected copies ({{ stay_size }}) stay where they are, as their sources have no quarantine. Turn it on with <code>photo-ledger source quarantine &lt;label&gt; &lt;folder&gt;</code>.</p>
+<p class="text-body-secondary">{{ stay }} rejected copies ({{ stay_size }}) stay where they are, as their sources have no quarantine. Turn it on in a source's settings on the <a href="/sources">Sources page</a>.</p>
 {% endif %}
 {% if unsafe %}
 <p class="text-body-secondary">Left alone, as no kept copy of the picture would remain: {{ unsafe|join(", ") }}.</p>

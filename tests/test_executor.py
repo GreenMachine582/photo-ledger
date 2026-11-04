@@ -329,4 +329,76 @@ def test_plan_page_applies_after_confirming(ready, web):
     assert "Applied." in applied.text
     assert status(conn, plan_id) == "applied"
     assert A_BACKUP not in snapshot(root)
-    assert "photo-ledger undo" in applied.text
+    assert 'data-bs-target="#undo-plan"' in applied.text
+    assert "photo-ledger undo" not in applied.text  # undo is on the page now
+
+
+def test_plan_page_undoes_after_confirming(ready, web):
+    conn, root, folder, plan_id = ready
+    before = snapshot(root)
+    assert 'id="undo-plan"' not in web.get("/plan").text  # nothing applied yet
+    web.post("/plan/apply", data={"csrf_token": csrf(web)})
+
+    assert web.post("/plan/undo").status_code == 403
+    assert status(conn, plan_id) == "applied"
+    undone = web.post("/plan/undo", data={"csrf_token": csrf(web)})
+    assert "Undone." in undone.text
+    assert status(conn, plan_id) == "undone"
+    assert snapshot(root) == before
+    assert snapshot(folder) == {}
+    assert 'id="undo-plan"' not in undone.text  # nothing left to undo
+
+    nothing = web.post("/plan/undo", data={"csrf_token": csrf(web)})
+    assert nothing.status_code == 409 and "no applied plan" in nothing.text
+
+
+def test_plan_page_names_an_offline_quarantine_when_undoing(ready, web):
+    conn, root, folder, plan_id = ready
+    web.post("/plan/apply", data={"csrf_token": csrf(web)})
+    moved = snapshot(root)
+    folder.rename(folder.with_name("unplugged"))
+    refused = web.post("/plan/undo", data={"csrf_token": csrf(web)})
+    assert refused.status_code == 409 and "Undo needs the quarantine at" in refused.text
+    assert status(conn, plan_id) == "applied"
+    assert snapshot(root) == moved
+
+
+def test_plan_page_finishes_an_interrupted_plan_and_undo(ready, web, monkeypatch):
+    conn, root, _, plan_id = ready
+    before = snapshot(root)
+    real_move = executor._move
+
+    def crash_on_second(calls):
+        """A move that dies on its second call, as the process would."""
+
+        def move(*args):
+            calls.append(args)
+            if len(calls) == 2:
+                raise Crash
+            return real_move(*args)
+
+        return move
+
+    monkeypatch.setattr(executor, "_move", crash_on_second([]))
+    with pytest.raises(Crash):
+        executor.apply(conn)
+    monkeypatch.setattr(executor, "_move", real_move)
+    recovery.recover(conn)
+    page = web.get("/plan").text
+    assert f"Plan {plan_id} didn" in page and f"Finish plan {plan_id}" in page
+    assert "photo-ledger apply" not in page
+
+    finished = web.post("/plan/apply", data={"csrf_token": csrf(web)})
+    assert "Applied." in finished.text and status(conn, plan_id) == "applied"
+
+    monkeypatch.setattr(executor, "_move", crash_on_second([]))
+    with pytest.raises(Crash):
+        executor.undo(conn)
+    monkeypatch.setattr(executor, "_move", real_move)
+    recovery.recover(conn)
+    page = web.get("/plan").text
+    assert "Finish the undo" in page and 'id="undo-plan"' not in page
+
+    undone = web.post("/plan/undo", data={"csrf_token": csrf(web)})
+    assert "Undone." in undone.text and status(conn, plan_id) == "undone"
+    assert snapshot(root) == before

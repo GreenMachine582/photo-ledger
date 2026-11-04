@@ -80,10 +80,11 @@ check and never probes a drive itself, as some drives are slow to answer. Set it
   in sources without a quarantine are counted as staying where they are, and a copy whose picture would be left with
   no kept copy is left alone. Viewing the page runs a quick dry run without recording it. **Rebuild plan** rebuilds the
   plan from your decisions, and **Dry run with hashes** hashes every file. Both write only to the catalogue. **Apply
-plan** appears only after a clean recorded dry run, and asks you to confirm. Undo stays on the command line
-(`photo-ledger undo`). Bulk
-  actions apply to exact duplicates only, and always go through this page. `photo-ledger plan` does the same from the
-  command line.
+  plan** appears only after a clean recorded dry run, and asks you to confirm. **Undo plan** puts back every file the
+  last applied plan moved, after you confirm, through the executor as `photo-ledger undo` does. A plan or undo that
+  was interrupted shows **Finish plan** or **Finish the undo** instead, which retries what's left after recovery has
+  checked it. Bulk actions apply to exact duplicates only, and always go through this page. `photo-ledger plan`,
+  `apply` and `undo` do the same from the command line.
 - **Library** (`/library`): Choose the library's folder and its `year` or `original` layout, then **Plan** and
   **Build**, the same as `photo-ledger library`. The page shows whether the folder is connected, how many pictures are
   built, planned and waiting for review, the read-only dry-run problems, failed copies and pictures no longer chosen.
