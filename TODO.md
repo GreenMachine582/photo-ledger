@@ -5,13 +5,6 @@
 Open work only: remove an item when it ships. Shipped work is in `CHANGELOG.md`. Each milestone is useful alone, and
 only an applied plan ever changes your files.
 
-## M5 Organise
-
-Done when a clean library builds from approved keepers, with originals untouched by default and collections intact.
-
-- [ ] Destination library you choose, with year-based or original folder layouts
-- [ ] Date fixes and XMP sidecars
-
 ## M6 Immich export
 
 Done when a test library shows the same albums and tags in Immich as in the ledger.

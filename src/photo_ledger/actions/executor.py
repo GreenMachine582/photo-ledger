@@ -1,4 +1,4 @@
-"""The executor: the only code that ever changes a source folder or a quarantine.
+"""The executor: the only code that ever changes a source folder, a quarantine or the library.
 
 SQLite and the filesystem can't commit together, so every action is journalled as ``started``
 before its file operation and as ``done`` or ``failed`` after it. ``recovery.py`` reads that
@@ -10,6 +10,7 @@ step of a verified move, once a copy with the same BLAKE3 hash exists at the des
 | Same volume    | A rename that never replaces an existing file                         |
 | Across volumes | Copy to a ``.photo-ledger-partial`` file, fsync, verify the hash,     |
 |                | rename it into place without replacing, then remove the original      |
+| Into a library | The same verified copy, and the original is never removed            |
 """
 
 import errno
@@ -20,9 +21,15 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from blake3 import blake3
+
 from photo_ledger.actions import PlanError, paths, planner
+from photo_ledger.db import library as library_queries
 from photo_ledger.db import now_iso
 from photo_ledger.db import plans as queries
+from photo_ledger.library import plan as library_plan
+from photo_ledger.library import sidecars
+from photo_ledger.library.settings import get_library, library_name, library_online
 from photo_ledger.scanner.hashing import hash_file
 from photo_ledger.sources.service import is_online
 
@@ -256,3 +263,128 @@ def undo(conn: sqlite3.Connection) -> ApplyResult:
                 size_bytes=action["size_bytes"],
             )
     return _execute(conn, plan_id)
+
+
+# Building the library ------------------------------------------------------------------------
+
+
+@dataclass
+class BuildResult:
+    status: str
+    copied: int = 0
+    sidecars: int = 0
+    dates: int = 0
+    failed: list[str] = field(default_factory=list)
+    #: Sidecars someone else wrote or edited, left as they are.
+    kept_sidecars: list[str] = field(default_factory=list)
+
+
+def _write_sidecar(target: Path, text: str, owned: str | None) -> str | None:
+    """Write a sidecar, returning its hash. ``None`` when one is there that isn't ours to replace.
+
+    A sidecar is only ever replaced while it still has the hash the executor gave it, so a sidecar
+    you edited, or one another app wrote, is left alone.
+    """
+    data = text.encode("utf-8")
+    if target.exists() and (owned is None or hash_file(target) != owned):
+        return None
+    partial = paths.partial(target)
+    discard_partial(partial)  # left by an interrupted earlier write
+    with open(partial, "xb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    if target.exists():
+        os.replace(partial, target)  # our own sidecar, unchanged since we wrote it
+    elif not _rename_no_replace(partial, target):
+        os.rename(partial, target)
+    return blake3(data).hexdigest()
+
+
+def _finish_library_file(
+    conn: sqlite3.Connection,
+    library: sqlite3.Row,
+    entry: sqlite3.Row,
+    extras: sidecars.Extras,
+    result: BuildResult,
+) -> None:
+    """Bring a copied file's sidecar and file date up to date. Only the library copy changes."""
+    _origin, target = library_plan.endpoints(library, entry)
+    if not target.is_file():
+        return
+    side = sidecars.sidecar_path(target)
+    text = extras.sidecar_text(entry["content_id"], target)
+    if blake3(text.encode("utf-8")).hexdigest() != entry["sidecar_blake3"] or not side.exists():
+        written = _write_sidecar(side, text, entry["sidecar_blake3"])
+        if written is None:
+            result.kept_sidecars.append(str(side))
+        else:
+            with conn:
+                library_queries.set_sidecar(conn, entry["id"], written)
+            result.sidecars += 1
+    date = extras.date(entry["content_id"])
+    wanted = f"{date.taken}{date.offset or ''}" if date else None
+    if wanted != entry["applied_date"]:
+        # The capture date, or back to the original's own file date when there's none now.
+        mtime_ns = date.timestamp_ns() if date else entry["mtime_ns"]
+        os.utime(target, ns=(target.stat().st_atime_ns, mtime_ns))
+        with conn:
+            library_queries.set_applied_date(conn, entry["id"], wanted)
+        result.dates += 1
+
+
+def _copy_into_library(
+    conn: sqlite3.Connection, library: sqlite3.Row, entry: sqlite3.Row
+) -> str | None:
+    """Copy one picture into the library. Returns why it failed, or ``None`` when it's done."""
+    origin, target = library_plan.endpoints(library, entry)
+    partial = paths.partial(target)
+    had_partial = partial.exists()
+    with conn:
+        library_queries.set_state(conn, entry["id"], "started")
+    try:
+        if not library_online(library):
+            raise Refused(f"The library is offline. Connect {library_name(library)}.")
+        if not is_online(entry):
+            raise Refused(f"Source '{entry['source_label']}' is offline.")
+        if target.exists() or had_partial:
+            raise Refused(f"{target} already exists, and nothing is ever overwritten.")
+        _verify(origin, entry["expected_blake3"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        _copy_verified(origin, target, entry["expected_blake3"])
+    except (Refused, OSError) as exc:
+        if not had_partial:
+            discard_partial(partial)
+        with conn:
+            library_queries.set_state(conn, entry["id"], "failed", error=str(exc))
+        return str(exc)
+    with conn:
+        library_queries.set_state(conn, entry["id"], "done")
+    return None
+
+
+def build_library(conn: sqlite3.Connection) -> BuildResult:
+    """Copy every planned picture into the library. Originals are never changed or removed."""
+    from photo_ledger.actions.recovery import recover
+
+    recover(conn)
+    library = get_library(conn)
+    if not library_online(library):
+        raise PlanError(f"The library is offline. Connect {library_name(library)}.")
+    result = BuildResult("building")
+    for entry in library_queries.entries(conn, "pending", "failed"):
+        error = _copy_into_library(conn, library, entry)
+        if error is None:
+            result.copied += 1
+        else:
+            result.failed.append(f"{entry['source_label']}/{entry['source_rel_path']}: {error}")
+    # Sidecars and dates follow the catalogue, so a renamed collection or a date you set reaches
+    # files copied in earlier builds too.
+    extras = sidecars.Extras(conn, library["layout"])
+    for entry in library_queries.entries(conn, "done"):
+        try:
+            _finish_library_file(conn, library, entry, extras, result)
+        except OSError as exc:
+            result.failed.append(f"library/{entry['rel_path']}: {exc}")
+    result.status = "incomplete" if result.failed else "complete"
+    return result

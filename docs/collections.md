@@ -29,15 +29,58 @@ and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collect
 | Immich albums | Real albums, including a photo in more than one | Needs the optional export through Immich's API (M6) |
 | CSV and JSON | Everything above, for your own scripts | Includes hash, path, collections and capture date |
 
+## Building the library
+
+`photo-ledger library set <folder> [--layout year|original]` chooses an existing folder outside every source and
+quarantine. `library plan` previews the build and dry-runs it, and `library build` copies each picture in, verified
+by its hash. Originals are never changed.
+
+- **Which pictures:** Every picture that no decision rejects and that has no pair still open, skipped or needing
+  review. The rest wait for review and are counted, so the library never holds an undecided duplicate. A picture
+  whose copies can't be decoded is left out.
+- **Which copy:** The best of its present copies that no decision rejects: the higher source priority, then the
+  tidiest path. This is the same rule the reports use.
+- **`year` layout:** `YYYY/<main collection>/<filename>`, using the EXIF capture date. A picture without one goes in
+  `Undated/`, as a file date may only be the date it was restored. A collection that starts with the year itself
+  isn't repeated, so a `2019` folder gives `2019/IMG_0001.jpg`.
+- **`original` layout:** `<source label>/<path in the source>`.
+- **Main collection:** The collection of the chosen copy's own folder, or else the first, alphabetically, of the
+  collections it inherits from the copies it replaced. Hidden collections, and everything beneath them, are skipped.
+- **Names:** A name already used, ignoring case, gets ` (2)`, ` (3)` and so on. Characters that Windows doesn't allow
+  become `_`.
+- **Rebuilding:** Only adds. Files already copied keep their place. A picture rejected since stays where it is and
+  is reported. A layout can't change once files are copied, so a new layout needs a new folder.
+
+## Dates
+
+A picture's capture date is the one you set with `photo-ledger date set <source label>/<path> <YYYY-MM-DD[THH:MM[:SS]]>`,
+or else its EXIF date. A file's modified time never counts, as it may only be the day the file was restored.
+
+- **Dates you set** belong to the picture, so every copy shares them, and no rescan overwrites them. `date clear`
+  forgets one.
+- **The library copy's file date** is set to the capture date, using its EXIF offset when there is one and local
+  time otherwise. A restored photo stops showing its restore date. Without a capture date, the copy keeps the
+  original's file date.
+- **Originals are never changed.** A date you set reaches only the library copy's file date and its sidecar on the
+  next `library build`. A file already copied into `Undated/` stays there, because copies never move.
+
 ## Tagging for Immich
 
-Write `IMG_0412.jpg.xmp` beside each library file, with hierarchical tags in `digiKam:TagsList`, which Immich reads first:
+`library build` writes `IMG_0412.jpg.xmp` beside each library file, with hierarchical tags in `digiKam:TagsList`,
+which Immich reads first:
 
-- `Collections/Holidays/2019/Japan`
-- `Sources/Old PC`
+- `Collections/Holidays/2019/Japan`, for every visible collection the picture belongs to through any copy, including
+  the copies it replaced
+- `Sources/Old PC`, for every source that holds a copy
+- the photo's own keywords, from IPTC and XMP `dc:subject`
 
-Immich uses the first tag field it finds and doesn't merge them, and sidecars take priority over embedded tags. Copy any
-existing embedded keywords into the sidecar, or they'll stop showing.
+Immich uses the first tag field it finds and doesn't merge them, and sidecars take priority over embedded tags. That's
+why the photo's own keywords are copied in, or they'd stop showing. `dc:subject` repeats the collection names and
+keywords as flat keywords, and `exif:DateTimeOriginal` holds the capture date.
+
+Sidecars follow the catalogue. Renaming, merging or hiding a collection, or setting a date, updates them on the next
+build. A sidecar is only replaced while it's still the one the build wrote, so one you've edited, or one another app
+wrote, is left alone and reported.
 
 ## Getting photos into Immich
 

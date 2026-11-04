@@ -61,8 +61,13 @@ else. See [rescans.md](rescans.md).
 - **Overview** (`/`): File and photo counts, duplicated space, space marked for the plan by your decisions, and how
   many pairs are open, skipped, needing review and decided. It lists each source with its online state and last scan,
   and each scan with a link to review it.
-- **Sources:** Mapping, relabelling and reconnecting stay on the command line for now (`photo-ledger source`), along
-  with creating and running scans.
+- **Sources** (`/sources`): Map a folder or drive by typing its path and a label. Check whether each source is
+  connected, on the volume it was mapped on, one at a time or all at once. Reconnect a source at its new drive letter
+  or mount path: leave the path empty to find it by its volume, or type it. The page shows the state from the last
+check and never probes a drive itself, as some drives are slow to answer. Set its keeper priority, and turn its
+  quarantine on or off. It's the same as `photo-ledger source`, with the same refusals: overlapping folders, a
+  different drive, or a quarantine inside a source. The page stores only paths you type, and never browses, serves or
+  changes a folder. Creating and running scans stays on the command line.
 - **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
   mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).
 - **Collections** (`/collections`): Rename, merge or hide collections. See [collections.md](collections.md).

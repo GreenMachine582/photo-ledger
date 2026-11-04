@@ -10,6 +10,7 @@ import re
 import sqlite3
 from pathlib import Path, PurePath
 
+from photo_ledger.db import library as library_queries
 from photo_ledger.db import sources as queries
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.sources import device
@@ -53,6 +54,17 @@ def _refuse_overlap(conn: sqlite3.Connection, root: Path, *, ignore_id: int | No
                 f"{root} overlaps the quarantine for '{other['label']}' at "
                 f"{other['quarantine_path']}. Scanning it would catalogue quarantined copies."
             )
+    _refuse_library(conn, root, "source")
+
+
+def _refuse_library(conn: sqlite3.Connection, folder: Path, what: str) -> None:
+    """A source or quarantine can't overlap the library, which only the executor writes to."""
+    library = library_queries.get(conn)
+    if library is not None and overlaps(folder, library["root_path"]):
+        raise SourceError(
+            f"{folder} overlaps the library at {library['root_path']}. A {what} must sit "
+            "outside it."
+        )
 
 
 def list_sources(conn: sqlite3.Connection) -> list[sqlite3.Row]:
@@ -162,6 +174,7 @@ def set_quarantine(
                 f"{root} overlaps source '{other['label']}' at {other['root_path']}. "
                 "A quarantine must sit outside every source, or a rescan would catalogue it."
             )
+    _refuse_library(conn, root, "quarantine")
     volume_id = device.describe(root).volume_id
     with conn:
         queries.set_quarantine(conn, source["id"], path=str(root), volume_id=volume_id)
