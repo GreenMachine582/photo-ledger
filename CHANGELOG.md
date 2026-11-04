@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.6.0...v0.7.0) (2026-11-04)
+
+
+### Features
+
+* manage the library, scans and forgotten sources from the browser ([#17](https://github.com/GreenMachine582/photo-ledger/issues/17)) ([f2ecae0](https://github.com/GreenMachine582/photo-ledger/commit/f2ecae048f558b85257456dbdb942184a3fed97b))
+* **sources:** rename and forget sources ([#15](https://github.com/GreenMachine582/photo-ledger/issues/15)) ([c468e20](https://github.com/GreenMachine582/photo-ledger/commit/c468e20c6d172d2a6d25c283da729fca074e63f1))
+* **web:** undo a plan and finish an interrupted one from the Plan page ([#18](https://github.com/GreenMachine582/photo-ledger/issues/18)) ([bbd8ee9](https://github.com/GreenMachine582/photo-ledger/commit/bbd8ee95d7411124379f74543ceb43e16b14f351))
+
 ## [0.6.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.5.0...v0.6.0) (2026-11-04)
 
 
