@@ -45,8 +45,10 @@ def test_every_action_needs_a_csrf_token(web, conn, folders):
         f"/sources/{source_id}/reconnect",
         f"/sources/{source_id}/priority",
         f"/sources/{source_id}/quarantine",
+        f"/sources/{source_id}/rename",
+        f"/sources/{source_id}/forget",
     ):
-        data = {"path": str(folders), "label": "x", "priority": 1}
+        data = {"path": str(folders), "label": "x", "priority": 1, "confirm": "usb"}
         assert web.post(url, data=data).status_code == 403
     assert [row["label"] for row in sources.list_sources(conn)] == ["usb"]
 
@@ -146,3 +148,23 @@ def test_priority_and_quarantine(web, conn, folders):
 
 def test_an_unknown_source_is_refused(web):
     assert post(web, "/sources/999/check").status_code == 409
+
+
+def test_rename_and_forget(web, conn, folders):
+    before = snapshot(folders / "usb")
+    sources.add_source(conn, folders / "usb", "usb")
+    sources.add_source(conn, folders / "other", "other")
+    source_id = source(conn)["id"]
+
+    renamed = post(web, f"/sources/{source_id}/rename", label=" usb-2014 ")
+    assert "Renamed" in renamed.text and "usb-2014" in renamed.text
+    assert post(web, f"/sources/{source_id}/rename", label="other").status_code == 409
+    assert post(web, f"/sources/{source_id}/rename", label="a,b").status_code == 409
+
+    wrong = post(web, f"/sources/{source_id}/forget", confirm="usb")
+    assert wrong.status_code == 409
+    assert "to confirm" in wrong.text
+    forgot = post(web, f"/sources/{source_id}/forget", confirm="usb-2014")
+    assert "Forgotten" in forgot.text
+    assert [row["label"] for row in sources.list_sources(conn)] == ["other"]
+    assert snapshot(folders / "usb") == before

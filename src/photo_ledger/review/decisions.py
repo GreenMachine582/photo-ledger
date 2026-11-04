@@ -141,6 +141,30 @@ def undo_last(conn: sqlite3.Connection) -> int | None:
         return last["pair_id"]
 
 
+def _in_chunks(conn: sqlite3.Connection, query: str, ids: list[int]) -> list[sqlite3.Row]:
+    """Run ``query`` with ``{marks}`` filled for each chunk of ``ids``, within SQLite's limits."""
+    rows = []
+    for start in range(0, len(ids), 500):
+        chunk = ids[start : start + 500]
+        rows += conn.execute(query.format(marks=",".join("?" * len(chunk))), chunk).fetchall()
+    return rows
+
+
+def forget_pairs(conn: sqlite3.Connection, pair_ids: list[int]) -> None:
+    """Drop the decisions on pairs that are about to be deleted, inside the caller's transaction.
+
+    A rejection on one of them may have closed pairs that stay, so it's reverted first, which
+    reopens those. Then the pairs' decisions, and any closures they caused, are deleted.
+    """
+    doomed = _in_chunks(conn, "SELECT * FROM decisions WHERE pair_id IN ({marks})", pair_ids)
+    for decision in sorted(doomed, key=lambda row: row["id"], reverse=True):
+        if decision["superseded_at"] is None and decision["action"] != "closed":
+            _revert(conn, decision)
+    ids = [decision["id"] for decision in doomed]
+    _in_chunks(conn, "DELETE FROM decisions WHERE caused_by IN ({marks})", ids)
+    _in_chunks(conn, "DELETE FROM decisions WHERE id IN ({marks})", ids)
+
+
 def active_decision(conn: sqlite3.Connection, pair_id: int) -> sqlite3.Row | None:
     return _active(conn, pair_id)
 

@@ -79,6 +79,17 @@
     {% if row.quarantine %}<button type="submit" name="off" value="true" class="btn btn-outline-secondary">Turn off</button>{% endif %}
   </div>
 </form>
+<form method="post" action="/sources/{{ row.id }}/rename" class="mt-4">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  {{ gth_form_field("label", "Label", value=row.label, id="rename-label-" ~ row.id, help_text="Nothing on disk changes. Plans and library copies already made keep their paths.") }}
+  <button type="submit" class="btn btn-primary">Rename</button>
+</form>
+<form method="post" action="/sources/{{ row.id }}/forget" class="mt-4">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  {{ gth_alert("Forgetting removes this source from the ledger: its catalogued files, exact pairs and the decisions on them. The folder and its files stay exactly as they are. A source with files in an applied plan or the library can't be forgotten.", kind="warning") }}
+  {{ gth_form_field("confirm", "Type " ~ row.label ~ " to confirm", id="forget-confirm-" ~ row.id) }}
+  <button type="submit" class="btn btn-outline-danger">Forget this source</button>
+</form>
 {% endcall %}
 {% endfor %}
 {% endblock %}

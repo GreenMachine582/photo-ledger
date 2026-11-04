@@ -65,8 +65,11 @@ else. See [rescans.md](rescans.md).
   connected, on the volume it was mapped on, one at a time or all at once. Reconnect a source at its new drive letter
   or mount path: leave the path empty to find it by its volume, or type it. The page shows the state from the last
 check and never probes a drive itself, as some drives are slow to answer. Set its keeper priority, and turn its
-  quarantine on or off. It's the same as `photo-ledger source`, with the same refusals: overlapping folders, a
-  different drive, or a quarantine inside a source. The page stores only paths you type, and never browses, serves or
+  quarantine on or off. Rename a source, or forget it: forgetting removes its catalogued files, its exact pairs and
+  the decisions on them from the ledger, and leaves the folder as it is. Type its label to confirm. A source with files
+  in an applied plan or copied into the library can't be forgotten, as undo and the library rely on that history. It's
+  the same as `photo-ledger source`, with the same refusals: overlapping folders, a different drive, or a quarantine
+  inside a source. The page stores only paths you type, and never browses, serves or
   changes a folder. Creating and running scans stays on the command line.
 - **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
   mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).

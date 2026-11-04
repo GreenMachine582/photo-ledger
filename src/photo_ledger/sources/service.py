@@ -80,13 +80,7 @@ def get_source(conn: sqlite3.Connection, label: str) -> sqlite3.Row:
 
 def add_source(conn: sqlite3.Connection, path: Path | str, label: str) -> sqlite3.Row:
     """Map a folder or drive as a source, refusing one that overlaps an existing source."""
-    if not LABEL_PATTERN.match(label):
-        raise SourceError(
-            "Labels are 1-64 letters, digits, spaces, dots, dashes or underscores, "
-            "starting with a letter or digit."
-        )
-    if queries.by_label(conn, label):
-        raise SourceError(f"A source called '{label}' already exists.")
+    _check_label(conn, label)
     root = _resolve_root(path)
     _refuse_overlap(conn, root)
     details = dataclasses.asdict(device.describe(root))
@@ -209,3 +203,65 @@ def set_priority(conn: sqlite3.Connection, label: str, priority: int) -> sqlite3
     with conn:
         queries.set_priority(conn, source["id"], priority)
     return queries.by_id(conn, source["id"])
+
+
+def _check_label(conn: sqlite3.Connection, label: str) -> None:
+    if not LABEL_PATTERN.match(label):
+        raise SourceError(
+            "Labels are 1-64 letters, digits, spaces, dots, dashes or underscores, "
+            "starting with a letter or digit."
+        )
+    if queries.by_label(conn, label):
+        raise SourceError(f"A source called '{label}' already exists.")
+
+
+def rename_source(conn: sqlite3.Connection, label: str, new_label: str) -> sqlite3.Row:
+    """Give a source a new label. Nothing on disk changes.
+
+    Plans keep the quarantine paths they were made with, and library copies already built keep
+    their paths. New library copies in the ``original`` layout, and sidecar keywords from then
+    on, use the new label.
+    """
+    source = get_source(conn, label)
+    if new_label == label:
+        return source
+    _check_label(conn, new_label)
+    with conn:
+        queries.rename(conn, source["id"], new_label)
+    return queries.by_id(conn, source["id"])
+
+
+def forget_usage(conn: sqlite3.Connection, label: str) -> dict[str, int]:
+    """What forgetting a source would remove, and what would stop it."""
+    return queries.usage(conn, get_source(conn, label)["id"])
+
+
+def forget_source(conn: sqlite3.Connection, label: str) -> dict[str, int]:
+    """Remove a source from the ledger: its catalogued files, exact pairs and their decisions.
+
+    The folder itself is never touched. A source whose files are in an applied plan or a built
+    library copy is refused, as that history is what undo and the library rely on. Returns what
+    was removed.
+    """
+    from photo_ledger.matching.pairs import match
+    from photo_ledger.review.decisions import forget_pairs
+
+    source = get_source(conn, label)
+    usage = queries.usage(conn, source["id"])
+    if usage["running_scans"]:
+        raise SourceError(f"'{label}' is being scanned. Let the scan finish or pause it first.")
+    if usage["plan_actions"]:
+        raise SourceError(
+            f"'{label}' has files in an applied plan. Its journal is what undo relies on, so "
+            "the source can't be forgotten."
+        )
+    if usage["library_entries"]:
+        raise SourceError(f"'{label}' has files copied into the library, so it can't be forgotten.")
+    with conn:
+        pair_ids = queries.exact_pair_ids(conn, source["id"])
+        forget_pairs(conn, pair_ids)
+        queries.delete_pairs(conn, pair_ids)
+        queries.delete(conn, source["id"])
+    # Similar and name-conflict pairs that relied on its copies close by the usual rules.
+    match(conn)
+    return usage
