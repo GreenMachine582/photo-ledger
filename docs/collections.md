@@ -26,7 +26,7 @@ and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collect
 |---|---|---|
 | Folders | A library people can browse, such as `YYYY/Collection/` or the original structure | A photo in several collections gets one main folder. The others are in the tags and CSV |
 | XMP sidecars | Filterable tags in Immich and other photo apps | Originals stay byte-identical, so their hashes still match |
-| Immich albums | Real albums, including a photo in more than one | Needs the optional export through Immich's API (M6) |
+| Immich albums | Real albums, including a photo in more than one | Needs the optional export through Immich's API (M6, after v1) |
 | CSV and JSON | Everything above, for your own scripts | Includes hash, path, collections and capture date |
 
 ## Building the library
@@ -86,7 +86,7 @@ wrote, is left alone and reported.
 
 `immich upload --album` names albums from each file's parent folder. That suits simple libraries, but a photo in several
 collections would land in only one album. The CLI docs don't cover uploading sidecars either, so test a small sample
-first, including whether the tags arrive. A separate milestone (M6) adds the API export for full albums.
+first, including whether the tags arrive. A separate milestone (M6), after v1, adds the API export for full albums.
 
 Immich's docs, checked on 3 November 2026:
 [XMP sidecars](https://docs.immich.app/features/xmp-sidecars),

@@ -20,9 +20,38 @@ router = APIRouter(prefix="/plan")
 NOTICES = {
     "built": "Plan rebuilt from your decisions and dry-run. Nothing has changed on disk.",
     "checked": "Dry run finished, with every file hashed. Nothing has changed on disk.",
-    "applied": "Applied. Undo it with `photo-ledger undo`.",
+    "applied": "Applied. You can undo it here at any time: every move is in the journal.",
     "incomplete": "Some moves failed, and their files were left in place. See the problems below.",
+    "undone": "Undone. Every moved file is back where it came from, verified by its hash.",
+    "undo-incomplete": "Some files couldn't be put back, and both copies were left alone. "
+    "Fix the problem, then undo again to finish.",
 }
+
+
+def undo_state(conn: sqlite3.Connection) -> dict:
+    """What the page offers: finishing an interrupted plan or undo, or undoing the last plan.
+
+    These mirror ``executor.apply`` and ``executor.undo``, which each finish an unfinished plan
+    of their own kind before starting anything new.
+    """
+    unfinished = "status IN ('applying', 'incomplete')"
+    unfinished_undo = conn.execute(
+        f"SELECT * FROM plans WHERE {unfinished} AND undoes_plan_id IS NOT NULL"
+        " ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    undoable = conn.execute(
+        "SELECT * FROM plans WHERE status IN ('applied', 'incomplete')"
+        " AND undoes_plan_id IS NULL ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    return {
+        "unfinished": conn.execute(
+            f"SELECT * FROM plans WHERE {unfinished} AND undoes_plan_id IS NULL"
+            " ORDER BY id DESC LIMIT 1"
+        ).fetchone(),
+        "unfinished_undo": unfinished_undo,
+        # An interrupted undo is finished before another can start, so offer that instead.
+        "undoable": None if unfinished_undo else undoable,
+    }
 
 
 def page_context(conn: sqlite3.Connection) -> dict:
@@ -38,11 +67,7 @@ def page_context(conn: sqlite3.Connection) -> dict:
         "stay": preview.stay,
         "stay_size": human_size(preview.stay_bytes),
         "unsafe": preview.unsafe,
-        "unfinished": queries.latest(conn, "applying", "incomplete"),
-        "last_applied": conn.execute(
-            "SELECT * FROM plans WHERE status = 'applied' AND undoes_plan_id IS NULL"
-            " ORDER BY id DESC LIMIT 1"
-        ).fetchone(),
+        **undo_state(conn),
     }
     if current is None:
         return context
@@ -90,6 +115,18 @@ def apply_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """Apply the dry-run plan through the executor, after the page's confirm step."""
     result = executor.apply(conn)
     notice = "applied" if result.status == "applied" else "incomplete"
+    return RedirectResponse(f"/plan?notice={notice}", status_code=303)
+
+
+@router.post("/undo", dependencies=[Depends(require_csrf)])
+def undo_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+    """Put back the last applied plan's files through the executor, after the confirm step.
+
+    An interrupted undo is finished first, as with ``photo-ledger undo``. A quarantine that's
+    offline is refused with its name, through the app's expected-failure page.
+    """
+    result = executor.undo(conn)
+    notice = "undone" if result.status == "applied" else "undo-incomplete"
     return RedirectResponse(f"/plan?notice={notice}", status_code=303)
 
 
