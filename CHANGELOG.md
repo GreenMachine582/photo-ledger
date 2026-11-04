@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.5.0...v0.6.0) (2026-11-04)
+
+
+### Features
+
+* manage sources in the browser and build a clean library (M5) ([#13](https://github.com/GreenMachine582/photo-ledger/issues/13)) ([89345bb](https://github.com/GreenMachine582/photo-ledger/commit/89345bb0c8d3d2ded4f88c937cdad1661c414b76))
+
 ## [0.5.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.4.0...v0.5.0) (2026-11-03)
 
 
