@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.7.0...v0.8.0) (2026-11-05)
+
+
+### Features
+
+* **web:** export the catalogue as CSV and edit match settings in the browser ([#23](https://github.com/GreenMachine582/photo-ledger/issues/23)) ([cac4802](https://github.com/GreenMachine582/photo-ledger/commit/cac4802cf751afe6250513d4d89b09f784c30e1d))
+* **web:** guided next step, grouped navigation, toasts and busy buttons ([#22](https://github.com/GreenMachine582/photo-ledger/issues/22)) ([682fe84](https://github.com/GreenMachine582/photo-ledger/commit/682fe84f4e9260413d7ba8868adb70a338785dea))
+* **web:** run match from the Overview ([#19](https://github.com/GreenMachine582/photo-ledger/issues/19)) ([04c5a88](https://github.com/GreenMachine582/photo-ledger/commit/04c5a8820f01046ac2ce0a5669ccf20f78b5a2ad))
+* **web:** set and clear capture dates from a catalogue search ([#21](https://github.com/GreenMachine582/photo-ledger/issues/21)) ([e54dfe5](https://github.com/GreenMachine582/photo-ledger/commit/e54dfe5045d897cfa8498083f4a3e15481727d50))
+
 ## [0.7.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.6.0...v0.7.0) (2026-11-04)
 
 
