@@ -2,7 +2,7 @@
 
 A file's modified time may only be the day it was restored from a backup, so it's never shown
 or used as a capture date. A photo without EXIF, such as most PNGs, stays undated until you give
-it a date on the Catalogue page or with ``photo-ledger date set``. Dates belong to a picture, not
+it a date on the Photos page or with ``photo-ledger date set``. Dates belong to a picture, not
 one copy, and only ever change the library copy's file date and sidecar. Originals are never
 touched.
 """
@@ -114,7 +114,7 @@ def set_date(conn: sqlite3.Connection, where: str, value: str) -> str:
 
 
 def set_content_date(conn: sqlite3.Connection, content_id: int, value: str) -> str:
-    """``set_date`` for a picture named by its content ID, as the Catalogue page does."""
+    """``set_date`` for a picture named by its content ID, as the Photos page does."""
     taken = parse_date(value)
     content_id = _known_content(conn, content_id)
     with conn:

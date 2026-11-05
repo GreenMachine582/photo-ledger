@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.sources import service
-from photo_ledger.web.deps import get_db, render
+from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/sources")
 
@@ -71,16 +71,12 @@ def _label(conn: sqlite3.Connection, source_id: int) -> str:
 
 
 def _done(notice: str) -> RedirectResponse:
-    return RedirectResponse(f"/sources?notice={notice}", status_code=303)
+    return notify("/sources", NOTICES, notice)
 
 
 @router.get("", response_class=HTMLResponse)
-def sources_page(
-    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
-) -> HTMLResponse:
-    return render(
-        request, "sources.html", {"rows": _rows(conn), "notice": NOTICES.get(notice or "")}
-    )
+def sources_page(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
+    return render(request, "sources.html", {"rows": _rows(conn)})
 
 
 @router.post("", dependencies=[Depends(require_csrf)])

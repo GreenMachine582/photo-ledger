@@ -12,7 +12,7 @@ from greentechhub_fastapi.auth.csrf import require_csrf
 from photo_ledger.actions import dryrun, executor, planner
 from photo_ledger.db import plans as queries
 from photo_ledger.formatting import human_size
-from photo_ledger.web.deps import get_db, render
+from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/plan")
 
@@ -97,17 +97,15 @@ def page_context(conn: sqlite3.Connection) -> dict:
 
 
 @router.get("", response_class=HTMLResponse)
-def plan_page(
-    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
-) -> HTMLResponse:
-    return render(request, "plan.html", {**page_context(conn), "notice": NOTICES.get(notice or "")})
+def plan_page(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
+    return render(request, "plan.html", {**page_context(conn)})
 
 
 @router.post("", dependencies=[Depends(require_csrf)])
 def rebuild(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     summary = planner.build_plan(conn)
     dryrun.dry_run(conn, summary.plan_id)
-    return RedirectResponse("/plan?notice=built", status_code=303)
+    return notify("/plan", NOTICES, "built")
 
 
 @router.post("/apply", dependencies=[Depends(require_csrf)])
@@ -115,7 +113,7 @@ def apply_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """Apply the dry-run plan through the executor, after the page's confirm step."""
     result = executor.apply(conn)
     notice = "applied" if result.status == "applied" else "incomplete"
-    return RedirectResponse(f"/plan?notice={notice}", status_code=303)
+    return notify("/plan", NOTICES, notice)
 
 
 @router.post("/undo", dependencies=[Depends(require_csrf)])
@@ -127,7 +125,7 @@ def undo_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """
     result = executor.undo(conn)
     notice = "undone" if result.status == "applied" else "undo-incomplete"
-    return RedirectResponse(f"/plan?notice={notice}", status_code=303)
+    return notify("/plan", NOTICES, notice)
 
 
 @router.post("/check", dependencies=[Depends(require_csrf)])
@@ -135,4 +133,4 @@ def check(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     current = planner.draft(conn)
     if current is not None:
         dryrun.dry_run(conn, current["id"], verify=True)
-    return RedirectResponse("/plan?notice=checked", status_code=303)
+    return notify("/plan", NOTICES, "checked")

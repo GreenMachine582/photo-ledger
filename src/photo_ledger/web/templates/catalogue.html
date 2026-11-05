@@ -1,11 +1,11 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "form.html" import gth_form_field %}
 {% from "chips.html" import gth_switch %}
 {% from "card.html" import gth_card %}
 {% from "empty_state.html" import gth_empty_state %}
-{% set page_title = "Catalogue" %}
+{% set page_title = "Photos" %}
 {% set page_subtitle = "Find a photo and its copies, and give it a capture date. Searching only reads." %}
 
 {% macro date_badge(row) -%}

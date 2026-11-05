@@ -1,4 +1,5 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
+{% from "busy_form.html" import busy_form %}
 {% from "stat_card.html" import gth_stat_grid %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
@@ -12,7 +13,6 @@
 {% set page_subtitle = "A clean copy of each settled picture, in one folder outside every source. Building only adds verified copies: originals never change." %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 
 {% if not library %}
 {{ gth_empty_state("No library yet. Choose an existing folder outside every source and quarantine below. Nothing is created until you build.") }}
@@ -27,10 +27,7 @@
 {{ gth_stat_grid(cards, cols=4) }}
 
 <div class="d-flex flex-wrap gap-2 mb-3">
-  <form method="post" action="/library/plan">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-primary">Plan</button>
-  </form>
+  {{ busy_form("/library/plan", "Plan", "Planning…", csrf_token|default(none), btn_class="btn-primary") }}
   {% if can_build %}
   <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#build-library">Build</button>
   {% endif %}
@@ -39,11 +36,7 @@
 {% if can_build %}
 {% call gth_modal("build-library", title="Build the library?", static_backdrop=True) %}
 <p>{{ to_build }} pictures are copied into {{ library.root_path }}. Each copy is verified by its hash, nothing is overwritten and no original changes.</p>
-<form method="post" action="/library/build" class="d-flex justify-content-end gap-2">
-  {{ gth_csrf_field(csrf_token|default(none)) }}
-  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-  <button type="submit" class="btn btn-warning">Build</button>
-</form>
+{{ busy_form("/library/build", "Build", "Building…", csrf_token|default(none), btn_class="btn-warning", form_class="d-flex justify-content-end gap-2", cancel=True) }}
 {% endcall %}
 {% endif %}
 

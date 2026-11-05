@@ -1,10 +1,11 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% from "stat_card.html" import gth_stat_grid %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "empty_state.html" import gth_empty_state %}
 {% from "form.html" import gth_csrf_field %}
 {% from "toast.html" import gth_alert %}
+{% from "card.html" import gth_card %}
 {% from "modal.html" import gth_modal %}
 {% from "busy_button.html" import gth_busy_button %}
 {% from "result_panel.html" import gth_live_region %}
@@ -12,10 +13,13 @@
 {% set page_subtitle = "Catalogue backups, find duplicates and organise them safely." %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 {% if not data.sources %}
 {% call gth_empty_state("No sources mapped yet. Map one on the Sources page, or with `photo-ledger source add <path> --label <name>`, then scan it.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
 {% else %}
+{% call gth_card(title="Next step: " ~ step.title, card_class="mb-4 gth-next-step") %}
+<p class="mb-{{ '2' if step.url else '0' }}">{{ step.text }}</p>
+{% if step.url %}<a class="btn btn-primary" href="{{ step.url }}">{{ step.label }}</a>{% endif %}
+{% endcall %}
 {{ gth_stat_grid(cards, cols=4) }}
 
 <h2 class="h5 mt-4">Sources <a class="small fw-normal ms-2" href="/sources">Manage</a></h2>

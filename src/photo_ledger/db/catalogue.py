@@ -1,4 +1,4 @@
-"""Read-only catalogue lookups for the Catalogue page: find a picture and list its copies."""
+"""Read-only catalogue lookups for the Photos page: find a picture and list its copies."""
 
 import sqlite3
 

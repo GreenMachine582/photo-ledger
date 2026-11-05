@@ -1,0 +1,15 @@
+{% from "form.html" import gth_csrf_field %}
+{% from "busy_button.html" import gth_busy_button %}
+
+{% macro busy_form(action, label, busy_label, csrf_token=none, btn_class="btn-primary", form_class="", cancel=False) %}
+{#- A form for a long-running action. htmx posts it, so its gth_busy_button stays busy until the
+    route's HX-Redirect loads the next page, where the result shows as a toast. Without
+    JavaScript it's a plain post and redirect. cancel: a modal's Cancel button before it. -#}
+<form method="post" action="{{ action }}" hx-post="{{ action }}" hx-swap="none" hx-disabled-elt="find button[type=submit]"{% if form_class %} class="{{ form_class }}"{% endif %}>
+  {{ gth_csrf_field(csrf_token) }}
+  {%- if cancel %}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  {%- endif %}
+  {{ gth_busy_button(label, busy_label, btn_class=btn_class, submit=True) }}
+</form>
+{%- endmacro %}

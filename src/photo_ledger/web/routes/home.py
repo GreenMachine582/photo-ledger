@@ -6,16 +6,11 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from photo_ledger.formatting import human_size
+from photo_ledger.review.next_step import next_step
 from photo_ledger.review.overview import overview
 from photo_ledger.web.deps import get_db, render
 
 router = APIRouter()
-
-#: Results are shown from this fixed list, never from text in the URL.
-NOTICES = {
-    "scan-removed": "Scan removed. Its sources, catalogued files and decisions stay, and nothing "
-    "on disk changed.",
-}
 
 
 def overview_context(conn: sqlite3.Connection) -> dict:
@@ -34,12 +29,10 @@ def overview_context(conn: sqlite3.Connection) -> dict:
         {"label": "Needs review", "value": f"{data.pairs.get('needs_review', 0):,}"},
         {"label": "Decided", "value": f"{data.pairs.get('resolved', 0):,}"},
     ]
-    return {"data": data, "cards": cards}
+    return {"data": data, "cards": cards, "step": next_step(conn, data)}
 
 
 @router.get("/", response_class=HTMLResponse)
-def home(
-    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
-) -> HTMLResponse:
+def home(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
     context = overview_context(conn)
-    return render(request, "overview.html", {**context, "notice": NOTICES.get(notice or "")})
+    return render(request, "overview.html", {**context})

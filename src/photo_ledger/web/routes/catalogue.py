@@ -1,4 +1,4 @@
-"""The Catalogue page: find one photo and its copies, and set or clear its capture date.
+"""The Photos page: find one photo and its copies, and set or clear its capture date.
 
 Searching only reads. Setting or clearing a date writes only ``date_fixes`` in the catalogue, the
 same as ``photo-ledger date set|clear``. A date belongs to the picture, so every copy shares it.
@@ -13,7 +13,7 @@ from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.db import catalogue as queries
 from photo_ledger.library import dates
-from photo_ledger.web.deps import get_db, render
+from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/catalogue")
 
@@ -46,7 +46,6 @@ def search(
 def photo(
     request: Request,
     content_id: int,
-    notice: str | None = None,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> HTMLResponse:
     row = queries.photo(conn, content_id)
@@ -60,13 +59,12 @@ def photo(
             "photo": row,
             "copies": copies,
             "preview_id": next((c["file_id"] for c in copies if c["status"] != "missing"), None),
-            "notice": NOTICES.get(notice or ""),
         },
     )
 
 
 def _done(content_id: int, notice: str) -> RedirectResponse:
-    return RedirectResponse(f"/catalogue/{content_id}?notice={notice}", status_code=303)
+    return notify(f"/catalogue/{content_id}", NOTICES, notice)
 
 
 @router.post("/{content_id}/date", dependencies=[Depends(require_csrf)])

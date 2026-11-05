@@ -13,9 +13,15 @@ from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.db import scans as queries
 from photo_ledger.scanner import engine
-from photo_ledger.web.deps import get_db
+from photo_ledger.web.deps import get_db, notify
 
 router = APIRouter(prefix="/scans")
+
+#: Results are shown from this fixed list, never from text in the URL.
+NOTICES = {
+    "scan-removed": "Scan removed. Its sources, catalogued files and decisions stay, and nothing "
+    "on disk changed.",
+}
 
 
 @router.post("/{scan_id}/remove", dependencies=[Depends(require_csrf)])
@@ -24,4 +30,4 @@ def remove(scan_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Redirect
     if scan is None:
         raise engine.ScanError(f"There's no scan {scan_id}.")
     engine.remove_scan(conn, scan["name"])
-    return RedirectResponse("/?notice=scan-removed", status_code=303)
+    return notify("/", NOTICES, "scan-removed")
