@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
+from photo_ledger import preferences
 from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.matching import pairs as pair_matching
 from photo_ledger.web.deps import get_db, render
@@ -43,10 +44,8 @@ def match_summary(conn: sqlite3.Connection, threshold: int, generic: list[str]) 
 
 @router.post("/match", response_class=HTMLResponse, dependencies=[Depends(require_csrf)])
 def run_match(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
-    settings = request.app.state.settings
-    summary = match_summary(
-        conn, settings.photo_ledger_similar_threshold, settings.photo_ledger_generic_folders
-    )
+    prefs = preferences.effective(conn, request.app.state.settings)
+    summary = match_summary(conn, prefs.similar_threshold, prefs.generic_folders)
     if request.headers.get("HX-Request") == "true":
         return render(request, "match_result.html", {"match": summary})
     return render(request, "overview.html", {**overview_context(conn), "match": summary})

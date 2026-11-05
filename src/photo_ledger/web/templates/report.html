@@ -10,6 +10,9 @@
   <a class="nav-link{% if report and item == name %} active{% endif %}" href="/reports/{{ item }}{% if scan %}?scan={{ scan|urlencode }}{% endif %}">{{ item.replace("-", " ")|capitalize }}</a>
   {% endfor %}
 </nav>
+{% if not report %}
+<p><a class="btn btn-outline-secondary" href="/export/catalogue.csv">Export the catalogue as CSV</a> <span class="small text-body-secondary">One row per file, with its hash, dates and image details.</span></p>
+{% endif %}
 {% if report %}
 <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
   {%- set scan_options = [("", "All scans")] %}{% for item in scans %}{% set _ = scan_options.append((item, item)) %}{% endfor %}

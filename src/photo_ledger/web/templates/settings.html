@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "form.html" import gth_csrf_field, gth_form_field %}
+{% from "badge.html" import gth_badge %}
+{% from "card.html" import gth_card %}
+{% from "modal.html" import gth_modal %}
+{% set page_title = "Settings" %}
+{% set page_subtitle = "What the next match looks for. Saving changes only the catalogue: nothing on disk." %}
+
+{% macro origin(key) -%}
+{{ gth_badge("saved here", tone="good") if key in prefs.saved else gth_badge("default", tone="neutral") }}
+{%- endmacro %}
+
+{% block page %}
+{% call gth_card(title="Matching") %}
+<form method="post" action="/settings">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <p class="mb-1">Similar threshold {{ origin("similar_threshold") }}</p>
+  {{ gth_form_field("similar_threshold", "Largest pHash distance, out of 64 bits, that counts as a similar image", value=prefs.similar_threshold, type="number", min=minimum, max=maximum, step=1, help_text="Lower finds fewer, closer matches. 8 is the default. Similar images are never resolved automatically.") }}
+  <p class="mb-1">Generic folder names {{ origin("generic_folders") }}</p>
+  {{ gth_form_field("generic_folders", "Folder names that never become collections, one per line", value=prefs.generic_folders|join("\n"), type="textarea", rows=6, help_text="Matched ignoring case. The defaults are " ~ default_folders ~ ".") }}
+  <p class="small text-body-secondary">Both apply at the next match. A match never reopens a finished review unless a file's content changed.</p>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Save</button>
+    {% if prefs.saved %}<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#reset-settings">Reset to defaults</button>{% endif %}
+  </div>
+</form>
+{% endcall %}
+
+{% if prefs.saved %}
+{% call gth_modal("reset-settings", title="Reset to the defaults?") %}
+<p>The saved settings are forgotten, and the environment's or built-in defaults apply at the next match.</p>
+<form method="post" action="/settings/reset" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Reset</button>
+</form>
+{% endcall %}
+{% endif %}
+{% endblock %}

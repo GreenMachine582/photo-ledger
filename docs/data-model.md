@@ -79,5 +79,5 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 
 The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables, `0002`
 adds `review_pairs`, `0003` adds `collections` and `collection_folders`, `0004` adds `decisions`, `0005` adds
-`plans` and `plan_actions`, `0006` adds `library` and `library_entries`, and `0007` adds `date_fixes` and the
-library's sidecar and date columns.
+`plans` and `plan_actions`, `0006` adds `library` and `library_entries`, `0007` adds `date_fixes` and the
+library's sidecar and date columns, and `0008` adds `settings`, the values saved on the Settings page as JSON.

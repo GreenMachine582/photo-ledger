@@ -78,7 +78,9 @@ photo-ledger library build    # copy, verified by hash, with an XMP sidecar besi
 
 Sources can also be mapped, checked and reconnected on the Sources page at <http://127.0.0.1:8765/sources>, and the
 library set, planned and built on the Library page at <http://127.0.0.1:8765/library>. A saved scan you no longer need
-can be removed from the Overview page, or with `photo-ledger scan remove <name>`.
+can be removed from the Overview page, or with `photo-ledger scan remove <name>`. The Photos and Reports pages
+download the whole catalogue as CSV, the same as `photo-ledger export csv`, and the Settings page sets the similar
+threshold and the generic folder names.
 
 To try it without real photos, `python scripts/make_fixtures.py <empty-folder>` generates a test tree.
 

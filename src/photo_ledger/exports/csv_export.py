@@ -4,12 +4,13 @@ Exports are read-only with respect to sources, and refuse to write inside one.
 """
 
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 
 from photo_ledger.exports.guard import ExportError, ensure_outside_sources, write_csv
 from photo_ledger.scanner.engine import get_scan
 
-__all__ = ["COLUMNS", "ExportError", "export_files"]
+__all__ = ["COLUMNS", "ExportError", "catalogue_rows", "export_files"]
 
 COLUMNS = (
     "source",
@@ -35,9 +36,8 @@ COLUMNS = (
 )
 
 
-def export_files(conn: sqlite3.Connection, out: Path, scan_name: str | None = None) -> int:
-    """Write the catalogue, or one scan's sources, to ``out``. Returns the number of rows."""
-    ensure_outside_sources(conn, out)
+def catalogue_rows(conn: sqlite3.Connection, scan_name: str | None = None) -> Iterator[list]:
+    """One row per file, in ``COLUMNS`` order, for the catalogue or one scan's sources."""
     where, params = "", ()
     if scan_name is not None:
         scan = get_scan(conn, scan_name)
@@ -57,4 +57,10 @@ def export_files(conn: sqlite3.Connection, out: Path, scan_name: str | None = No
         """,
         params,
     )
-    return write_csv(conn, out, COLUMNS, ([row[column] for column in COLUMNS] for row in rows))
+    return ([row[column] for column in COLUMNS] for row in rows)
+
+
+def export_files(conn: sqlite3.Connection, out: Path, scan_name: str | None = None) -> int:
+    """Write the catalogue, or one scan's sources, to ``out``. Returns the number of rows."""
+    ensure_outside_sources(conn, out)
+    return write_csv(conn, out, COLUMNS, catalogue_rows(conn, scan_name))

@@ -16,6 +16,7 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `matching/` | Exact, similar and mismatch checks, stable pairs, scores | M2 |
 | `collections/` | Folder names to collections, and inheritance | M2 |
 | `review/` | Decisions, review sessions and what the comparison view shows | M3 |
+| `preferences.py` | The similar threshold and generic folder names saved on the Settings page, over the environment's | v1 |
 | `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
 | `actions/` | Planner, dry run, executor, undo and recovery. Only `executor.py` writes to sources, quarantines and the library | M4, M5 |
@@ -24,12 +25,12 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers
 `source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library`, `date` and `export`. The browser
-covers the same sources, match, review, plan, apply, undo, library and capture date steps, and removing a saved scan. Creating and running scans stays
+covers the same sources, match, review, plan, apply, undo, library and capture date steps, the CSV export, the match settings, and removing a saved scan. Creating and running scans stays
 on the command line.
 
 In the browser, the Overview names the next step, from mapping a source to a built library (`review/next_step.py`). The
-navigation groups the pages under Catalogue (sources, photos, collections, reports), Review and Organise (plan,
-library). Each action redirects with its result as a toast, never as text in the URL. Long actions use busy buttons:
+navigation groups the pages under Catalogue (sources, photos, collections, reports), Review, Organise (plan,
+library) and Settings. Each action redirects with its result as a toast, never as text in the URL. Long actions use busy buttons:
 htmx posts the form, and `web/htmx.py` turns the redirect into a full page load. A refusal goes back to the page it
 came from, as a toast.
 

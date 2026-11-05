@@ -10,8 +10,9 @@ and `Best of 2019/IMG_0412.jpg` are duplicates, the keeper stays in both collect
   becomes `Holidays > 2019 > Japan`. Names match case-insensitively, so `holidays/2019/japan` on another drive joins
   the same collection.
 - **Generic folders:** Leave out the source root, DCF camera folders such as `100CANON`, and generic names: `DCIM`,
-  `Camera`, `Pictures`, `Photos`, `My Pictures` and `Camera Roll` by default. Change the list with
-  `PHOTO_LEDGER_GENERIC_FOLDERS`, as JSON such as `["DCIM", "Pictures"]`. A folder with no meaningful name left has
+  `Camera`, `Pictures`, `Photos`, `My Pictures` and `Camera Roll` by default. Change the list on the Settings page, or
+  with `PHOTO_LEDGER_GENERIC_FOLDERS`, as JSON such as `["DCIM", "Pictures"]`. A list saved on the Settings page
+  wins over the variable until you reset it, and applies at the next match. A folder with no meaningful name left has
   no collection.
 - **Building:** `photo-ledger match` maps any new folder before matching, and `photo-ledger report collections` lists
   them. Mappings are only ever added, never rewritten.

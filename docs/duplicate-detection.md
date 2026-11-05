@@ -11,7 +11,8 @@ Only JPEG and PNG are fully processed in the MVP. Other files are counted as uns
    group by BLAKE3.
 3. **Enrich:** Decode each new content once, reading EXIF and computing pHash. Failures go to `scan_errors`.
 4. **Similar:** Pair images within a Hamming distance threshold, starting at 8 of 64 bits and tuned on real samples.
-   Set `PHOTO_LEDGER_SIMILAR_THRESHOLD`, or pass `match --threshold`. The search splits each hash into threshold + 1
+   Set it on the Settings page, set `PHOTO_LEDGER_SIMILAR_THRESHOLD`, or pass `match --threshold`. A saved setting wins
+   over the variable, and `--threshold` wins over both. The search splits each hash into threshold + 1
    chunks: two hashes that close must share one chunk exactly, so only hashes sharing a chunk are compared, never
    every pair. Dimensions and capture time are used as supporting evidence.
 5. **Mismatch:** Run the name, date and single-source checks below.
