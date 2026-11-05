@@ -53,7 +53,7 @@ by its hash. Originals are never changed.
 
 ## Dates
 
-A picture's capture date is the one you set, or else its EXIF date. Set one on the **Catalogue** page: search for the
+A picture's capture date is the one you set, or else its EXIF date. Set one on the **Photos** page, under Catalogue: search for the
 photo by name or path (or list the undated ones), open it to see every copy, and save a date. Or use
 `photo-ledger date set <source label>/<path> <YYYY-MM-DD[THH:MM[:SS]]>`. A file's modified time never counts, as it may only be the day the file was restored.
 

@@ -1,4 +1,5 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
+{% from "busy_form.html" import busy_form %}
 {% from "stat_card.html" import gth_stat_grid %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "form.html" import gth_csrf_field %}
@@ -9,23 +10,16 @@
 {% set page_subtitle = "What your decisions would move, checked by a dry run. Nothing moves until you apply it, and nothing is ever deleted." %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 {% if unfinished %}{{ gth_alert("Plan " ~ unfinished.id ~ " didn't finish. Finish it to retry the moves that are left, or undo it to put back the files it moved.", kind="warning") }}{% endif %}
 {% if unfinished_undo %}{{ gth_alert("Undoing plan " ~ unfinished_undo.undoes_plan_id ~ " didn't finish. Finish the undo to put back the files that are left.", kind="warning") }}{% endif %}
 
 {% if unfinished or unfinished_undo or undoable %}
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
   {% if unfinished %}
-  <form method="post" action="/plan/apply">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-warning">Finish plan {{ unfinished.id }}</button>
-  </form>
+  {{ busy_form("/plan/apply", "Finish plan " ~ unfinished.id, "Finishing…", csrf_token|default(none), btn_class="btn-warning") }}
   {% endif %}
   {% if unfinished_undo %}
-  <form method="post" action="/plan/undo">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-warning">Finish the undo</button>
-  </form>
+  {{ busy_form("/plan/undo", "Finish the undo", "Undoing…", csrf_token|default(none), btn_class="btn-warning") }}
   {% elif undoable %}
   {% if not unfinished %}<span class="text-body-secondary">Plan {{ undoable.id }} was applied{% if undoable.applied_at %} on {{ undoable.applied_at[:16]|replace("T", " ") }}{% endif %}.</span>{% endif %}
   <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#undo-plan">Undo plan {{ undoable.id }}</button>
@@ -36,25 +30,15 @@
 {% if undoable and not unfinished_undo %}
 {% call gth_modal("undo-plan", title="Undo plan " ~ undoable.id ~ "?", static_backdrop=True) %}
 <p>Every file plan {{ undoable.id }} moved goes back where it came from. Each one is verified by its hash first, and a file created since at its old place is never overwritten. Its quarantine must be connected.</p>
-<form method="post" action="/plan/undo" class="d-flex justify-content-end gap-2">
-  {{ gth_csrf_field(csrf_token|default(none)) }}
-  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-  <button type="submit" class="btn btn-warning">Undo</button>
-</form>
+{{ busy_form("/plan/undo", "Undo", "Undoing…", csrf_token|default(none), btn_class="btn-warning", form_class="d-flex justify-content-end gap-2", cancel=True) }}
 {% endcall %}
 {% endif %}
 {% if stale %}{{ gth_alert("You've made decisions since this plan was built. Rebuild it before applying.", kind="warning") }}{% endif %}
 
 <div class="d-flex flex-wrap gap-2 mb-3">
-  <form method="post" action="/plan">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-primary">{{ "Rebuild plan" if plan else "Build plan" }}</button>
-  </form>
+  {{ busy_form("/plan", "Rebuild plan" if plan else "Build plan", "Building the plan…", csrf_token|default(none), btn_class="btn-primary") }}
   {% if plan %}
-  <form method="post" action="/plan/check">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-outline-secondary">Dry run with hashes</button>
-  </form>
+  {{ busy_form("/plan/check", "Dry run with hashes", "Hashing…", csrf_token|default(none), btn_class="btn-outline-secondary") }}
   {% if can_apply %}
   <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#apply-plan">Apply plan</button>
   {% endif %}
@@ -64,11 +48,7 @@
 {% if can_apply %}
 {% call gth_modal("apply-plan", title="Apply this plan?", static_backdrop=True) %}
 <p>{{ actions|length }} rejected copies move to quarantine. Each is verified by its hash before it moves, nothing is overwritten and nothing is deleted. Undo, on this page, puts them back.</p>
-<form method="post" action="/plan/apply" class="d-flex justify-content-end gap-2">
-  {{ gth_csrf_field(csrf_token|default(none)) }}
-  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-  <button type="submit" class="btn btn-warning">Apply</button>
-</form>
+{{ busy_form("/plan/apply", "Apply", "Applying…", csrf_token|default(none), btn_class="btn-warning", form_class="d-flex justify-content-end gap-2", cancel=True) }}
 {% endcall %}
 {% endif %}
 

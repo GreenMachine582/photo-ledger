@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "form.html" import gth_csrf_field, gth_form_field %}
@@ -9,7 +9,6 @@
 {% set page_subtitle = "Named after folders and kept in the ledger, so they outlive the folders. Editing never changes a folder." %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 
 {% if options %}
 <div class="row g-3 mb-3">

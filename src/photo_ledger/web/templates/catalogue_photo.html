@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "form.html" import gth_csrf_field, gth_form_field %}
@@ -10,8 +10,7 @@
 {% set page_subtitle = copies[0].label ~ "/" ~ copies[0].rel_path if copies else "No catalogued copies" %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
-<p><a href="/catalogue">← Back to the catalogue</a></p>
+<p><a href="/catalogue">← Back to Photos</a></p>
 <div class="row g-4">
   <div class="col-md-5">
     {% if preview_id %}<img src="/files/{{ preview_id }}/preview" alt="{{ page_subtitle }}" class="img-fluid rounded">{% endif %}

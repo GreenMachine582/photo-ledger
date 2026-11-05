@@ -18,7 +18,7 @@ from photo_ledger.db import library as queries
 from photo_ledger.formatting import human_size
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
-from photo_ledger.web.deps import get_db, render
+from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/library")
 
@@ -65,16 +65,12 @@ def page_context(conn: sqlite3.Connection) -> dict:
 
 
 def _done(notice: str) -> RedirectResponse:
-    return RedirectResponse(f"/library?notice={notice}", status_code=303)
+    return notify("/library", NOTICES, notice)
 
 
 @router.get("", response_class=HTMLResponse)
-def library_page(
-    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
-) -> HTMLResponse:
-    return render(
-        request, "library.html", {**page_context(conn), "notice": NOTICES.get(notice or "")}
-    )
+def library_page(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
+    return render(request, "library.html", {**page_context(conn)})
 
 
 @router.post("", dependencies=[Depends(require_csrf)])

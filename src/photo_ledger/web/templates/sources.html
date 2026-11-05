@@ -1,4 +1,5 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
+{% from "busy_form.html" import busy_form %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
 {% from "form.html" import gth_csrf_field, gth_form_field %}
@@ -9,7 +10,6 @@
 {% set page_subtitle = "The folders and drives to scan. Mapping, checking and reconnecting never change them." %}
 
 {% block page %}
-{% if notice %}{{ gth_alert(notice, kind="success") }}{% endif %}
 
 {% call gth_card(title="Map a folder or drive") %}
 <form method="post" action="/sources" class="row g-2 align-items-end">
@@ -24,10 +24,7 @@
 <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
   <h2 class="h5 mb-0">Mapped sources</h2>
   {% if rows %}
-  <form method="post" action="/sources/check">
-    {{ gth_csrf_field(csrf_token|default(none)) }}
-    <button type="submit" class="btn btn-sm btn-outline-secondary">Check all</button>
-  </form>
+  {{ busy_form("/sources/check", "Check all", "Checking…", csrf_token|default(none), btn_class="btn-sm btn-outline-secondary") }}
   {% endif %}
 </div>
 

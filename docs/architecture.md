@@ -27,6 +27,12 @@ Scanning, matching and file actions don't import FastAPI, so the CLI works witho
 covers the same sources, match, review, plan, apply, undo, library and capture date steps, and removing a saved scan. Creating and running scans stays
 on the command line.
 
+In the browser, the Overview names the next step, from mapping a source to a built library (`review/next_step.py`). The
+navigation groups the pages under Catalogue (sources, photos, collections, reports), Review and Organise (plan,
+library). Each action redirects with its result as a toast, never as text in the URL. Long actions use busy buttons:
+htmx posts the form, and `web/htmx.py` turns the redirect into a full page load. A refusal goes back to the page it
+came from, as a toast.
+
 Runtime data lives outside the repo, in the OS application data folder from `platformdirs`: `photo-ledger.db`,
 thumbnails and logs. Besides the GTH packages, the dependencies are `fastapi`, `uvicorn`, `typer` and `platformdirs`,
 with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `httpx` for development.
