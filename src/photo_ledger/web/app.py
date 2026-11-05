@@ -22,6 +22,7 @@ from photo_ledger.web.routes import (
     files,
     home,
     library,
+    match,
     plan,
     reports,
     review,
@@ -78,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sources.router)
     app.include_router(library.router)
     app.include_router(scans.router)
+    app.include_router(match.router)
 
     @app.exception_handler(PhotoLedgerError)
     async def expected_failure(request: Request, exc: PhotoLedgerError):

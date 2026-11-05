@@ -18,10 +18,7 @@ NOTICES = {
 }
 
 
-@router.get("/", response_class=HTMLResponse)
-def home(
-    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
-) -> HTMLResponse:
+def overview_context(conn: sqlite3.Connection) -> dict:
     data = overview(conn)
     cards = [
         {"label": "Files", "value": f"{data.files:,}"},
@@ -37,8 +34,12 @@ def home(
         {"label": "Needs review", "value": f"{data.pairs.get('needs_review', 0):,}"},
         {"label": "Decided", "value": f"{data.pairs.get('resolved', 0):,}"},
     ]
-    return render(
-        request,
-        "overview.html",
-        {"data": data, "cards": cards, "notice": NOTICES.get(notice or "")},
-    )
+    return {"data": data, "cards": cards}
+
+
+@router.get("/", response_class=HTMLResponse)
+def home(
+    request: Request, notice: str | None = None, conn: sqlite3.Connection = Depends(get_db)
+) -> HTMLResponse:
+    context = overview_context(conn)
+    return render(request, "overview.html", {**context, "notice": NOTICES.get(notice or "")})

@@ -37,7 +37,7 @@
 {% endif %}
 
 {% call gth_table(["Collection", "Folders", "Files", "Photos", ""]) %}
-  {% call(row) gth_table_body(rows, empty_message="No collections yet. Run `photo-ledger match` after a scan.", colspan=5) %}
+  {% call(row) gth_table_body(rows, empty_message="No collections yet. Run match on the Overview after a scan.", colspan=5) %}
   <tr>
     <td>{{ row.path }} {% if row.hidden %}{{ gth_badge("hidden", tone="neutral") }}{% endif %}</td>
     <td>{{ row.folders }}</td>

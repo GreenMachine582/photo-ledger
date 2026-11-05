@@ -32,7 +32,7 @@ SHOW_LABELS = {
     "needs_review": "Needs review",
 }
 EMPTY = {
-    "open": "Nothing left to review here. Run `photo-ledger match` after a scan to find more.",
+    "open": "Nothing left to review here. Run match on the Overview after a scan to find more.",
     "new": "No new pairs since this scan last ran.",
     "skipped": "Nothing skipped.",
     "needs_review": "Nothing needs another look.",

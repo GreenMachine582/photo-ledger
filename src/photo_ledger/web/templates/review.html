@@ -28,7 +28,7 @@
 </form>
 {% if notice %}{{ gth_alert(notice, kind="warning") }}{% endif %}
 {% if not view %}
-{{ gth_empty_state(empty_message|default("Nothing left to review here. Run `photo-ledger match` after a scan to find more.")) }}
+{{ gth_empty_state(empty_message|default("Nothing left to review here. Run match on the Overview after a scan to find more.")) }}
 {% else %}
 {% if view.decision %}
 {{ gth_alert("Already decided: " ~ view.decision.action.replace("_", " ") ~ " on " ~ view.decision.decided_at[:16].replace("T", " ") ~ " UTC. Deciding again replaces it.", kind="info") }}
