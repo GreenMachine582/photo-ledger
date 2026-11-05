@@ -24,7 +24,7 @@ NOTICES = {
     "Nothing in it was marked missing.",
     "checked": "Checked every source.",
     "reconnected": "Reconnected at its new location.",
-    "priority": "Priority saved. Keeper suggestions use it from the next `photo-ledger match`.",
+    "priority": "Priority saved. Keeper suggestions use it from the next match.",
     "quarantine-on": "Quarantine is on. Rejected copies can move there when you apply a plan.",
     "quarantine-far": "Quarantine is on, on another device. Moves will copy and verify each file, "
     "so a folder on the source's own drive would be faster.",

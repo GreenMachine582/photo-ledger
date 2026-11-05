@@ -1,0 +1,8 @@
+{% from "result_panel.html" import gth_result_panel %}
+{% from "badge.html" import gth_badge %}
+{% call gth_result_panel("Matched with a similarity threshold of " ~ match.threshold, badges=match.found or [("No pairs", "neutral")], link=("/review", "Review pairs") if match.to_review else none) %}
+<p class="d-flex flex-wrap gap-2 mb-2">
+  {%- for label, tone in match.changes %}{{ gth_badge(label, tone) }}{% endfor %}
+</p>
+<p class="small text-body-secondary mb-3">Collections from folder names: {{ "{:,}".format(match.collections.total_collections) }} ({{ match.collections.new_collections }} new, {{ match.collections.new_folders }} folders mapped). Only the catalogue changed, nothing on disk.</p>
+{% endcall %}

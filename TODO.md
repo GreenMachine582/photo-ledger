@@ -9,7 +9,6 @@ only an applied plan ever changes your files.
 
 Done when you can go from an empty database to a built library without the command line.
 
-- [ ] Run match from the browser, with a busy button and result panel
 - [ ] Set and clear capture dates from the browser, from a catalogue search for one photo and its copies
 - [ ] Pick folders with a folder explorer instead of typing paths: folder names only, read-only, local use only
 - [ ] Create, run, pause and resume scans in the browser, with live progress and errors
