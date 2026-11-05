@@ -53,11 +53,12 @@ by its hash. Originals are never changed.
 
 ## Dates
 
-A picture's capture date is the one you set with `photo-ledger date set <source label>/<path> <YYYY-MM-DD[THH:MM[:SS]]>`,
-or else its EXIF date. A file's modified time never counts, as it may only be the day the file was restored.
+A picture's capture date is the one you set, or else its EXIF date. Set one on the **Catalogue** page: search for the
+photo by name or path (or list the undated ones), open it to see every copy, and save a date. Or use
+`photo-ledger date set <source label>/<path> <YYYY-MM-DD[THH:MM[:SS]]>`. A file's modified time never counts, as it may only be the day the file was restored.
 
-- **Dates you set** belong to the picture, so every copy shares them, and no rescan overwrites them. `date clear`
-  forgets one.
+- **Dates you set** belong to the picture, so every copy shares them, and no rescan overwrites them. Clearing one on the
+  photo's page, or `date clear`, forgets it.
 - **The library copy's file date** is set to the capture date, using its EXIF offset when there is one and local
   time otherwise. A restored photo stops showing its restore date. Without a capture date, the copy keeps the
   original's file date.

@@ -1,0 +1,43 @@
+{% extends "page.html" %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "badge.html" import gth_badge %}
+{% from "form.html" import gth_form_field %}
+{% from "chips.html" import gth_switch %}
+{% from "card.html" import gth_card %}
+{% from "empty_state.html" import gth_empty_state %}
+{% set page_title = "Catalogue" %}
+{% set page_subtitle = "Find a photo and its copies, and give it a capture date. Searching only reads." %}
+
+{% macro date_badge(row) -%}
+{%- if row.date_source == "manual" %}{{ gth_badge("set by you", tone="good") }}
+{%- elif row.date_source == "exif" %}{{ gth_badge("EXIF", tone="neutral") }}
+{%- else %}{{ gth_badge("undated", tone="warn") }}{% endif %}
+{%- endmacro %}
+
+{% block page %}
+{% call gth_card(title="Search") %}
+<form method="get" action="/catalogue" class="row g-2 align-items-end">
+  <div class="col-md-7">{{ gth_form_field("q", "File name or path", value=q, help_text="Part of a name, or <source label>/<path>, such as IMG_0001 or camera/2019.", field_class="mb-0") }}</div>
+  <div class="col-md-3">{{ gth_switch("undated", "Undated only", checked=undated, value="1", field_class="mb-0") }}</div>
+  <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Search</button></div>
+</form>
+{% endcall %}
+
+{% if searched %}
+<h2 class="h5 mt-4">Photos</h2>
+{% call gth_table(["", "Photo", "Copies", "Capture date", ""]) %}
+  {% call(row) gth_table_body(rows, empty_message="No catalogued photo matches.", colspan=5) %}
+  <tr>
+    <td style="width: 4rem"><img src="/files/{{ row.file_id }}/preview" alt="" class="img-fluid rounded" loading="lazy"></td>
+    <td class="text-break">{{ row.first_path }}</td>
+    <td>{{ row.copies }}</td>
+    <td>{{ row.taken.replace("T", " ") if row.taken else "—" }} {{ date_badge(row) }}</td>
+    <td class="text-end"><a href="/catalogue/{{ row.content_id }}">Open</a></td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+{% if rows|length == 50 %}<p class="small text-body-secondary">Showing the first 50. Narrow the search to see more.</p>{% endif %}
+{% else %}
+{{ gth_empty_state("Search for a photo by name or path, or list the undated ones, such as most PNGs.") }}
+{% endif %}
+{% endblock %}

@@ -18,6 +18,7 @@ from photo_ledger import __version__
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.errors import PhotoLedgerError
 from photo_ledger.web.routes import (
+    catalogue,
     collections,
     files,
     home,
@@ -49,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {"label": "Sources", "url": "/sources"},
                 {"label": "Review", "url": "/review"},
                 {"label": "Collections", "url": "/collections"},
+                {"label": "Catalogue", "url": "/catalogue"},
                 {"label": "Reports", "url": "/reports"},
                 {"label": "Plan", "url": "/plan"},
                 {"label": "Library", "url": "/library"},
@@ -80,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(library.router)
     app.include_router(scans.router)
     app.include_router(match.router)
+    app.include_router(catalogue.router)
 
     @app.exception_handler(PhotoLedgerError)
     async def expected_failure(request: Request, exc: PhotoLedgerError):

@@ -2,8 +2,9 @@
 
 A file's modified time may only be the day it was restored from a backup, so it's never shown
 or used as a capture date. A photo without EXIF, such as most PNGs, stays undated until you give
-it a date with ``photo-ledger date set``. Dates belong to a picture, not one copy, and only ever
-change the library copy's file date and sidecar. Originals are never touched.
+it a date on the Catalogue page or with ``photo-ledger date set``. Dates belong to a picture, not
+one copy, and only ever change the library copy's file date and sidecar. Originals are never
+touched.
 """
 
 import re
@@ -85,10 +86,37 @@ def _content_of(conn: sqlite3.Connection, where: str) -> int:
     return row[0]
 
 
+def date_of(conn: sqlite3.Connection, content_id: int) -> CaptureDate | None:
+    """One picture's capture date: the one you set, else its EXIF date, else none."""
+    row = conn.execute(
+        "SELECT d.captured_at, c.captured_at, c.capture_offset"
+        " FROM contents c LEFT JOIN date_fixes d ON d.content_id = c.id WHERE c.id = ?",
+        (content_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    fixed, exif, offset = row
+    if fixed:
+        return CaptureDate(fixed, None, "manual")
+    return CaptureDate(exif, offset, "exif") if exif else None
+
+
+def _known_content(conn: sqlite3.Connection, content_id: int) -> int:
+    if conn.execute("SELECT 1 FROM contents WHERE id = ?", (content_id,)).fetchone() is None:
+        raise LibraryError(f"There's no catalogued photo {content_id}.")
+    return content_id
+
+
 def set_date(conn: sqlite3.Connection, where: str, value: str) -> str:
     """Give a picture a capture date. Every copy shares it, and no rescan overwrites it."""
     taken = parse_date(value)
-    content_id = _content_of(conn, where)
+    return set_content_date(conn, _content_of(conn, where), taken)
+
+
+def set_content_date(conn: sqlite3.Connection, content_id: int, value: str) -> str:
+    """``set_date`` for a picture named by its content ID, as the Catalogue page does."""
+    taken = parse_date(value)
+    content_id = _known_content(conn, content_id)
     with conn:
         conn.execute(
             "INSERT INTO date_fixes (content_id, captured_at, set_at) VALUES (?, ?, ?)"
@@ -101,7 +129,12 @@ def set_date(conn: sqlite3.Connection, where: str, value: str) -> str:
 
 def clear_date(conn: sqlite3.Connection, where: str) -> bool:
     """Forget a date you set, going back to EXIF or undated. Returns whether there was one."""
-    content_id = _content_of(conn, where)
+    return clear_content_date(conn, _content_of(conn, where))
+
+
+def clear_content_date(conn: sqlite3.Connection, content_id: int) -> bool:
+    """``clear_date`` for a picture named by its content ID."""
+    content_id = _known_content(conn, content_id)
     with conn:
         cursor = conn.execute("DELETE FROM date_fixes WHERE content_id = ?", (content_id,))
     return cursor.rowcount > 0
