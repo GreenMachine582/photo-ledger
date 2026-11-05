@@ -138,3 +138,16 @@ def test_scan_commands(tmp_path, monkeypatch, fixture_tree):
     missing = runner.invoke(cli.app, ["scan", "run", "nope"])
     assert missing.exit_code == 1
     assert "no scan called 'nope'" in missing.output
+
+
+def test_match_uses_the_saved_settings(tmp_path, monkeypatch):
+    from photo_ledger import preferences
+    from photo_ledger.db import open_db
+
+    monkeypatch.setenv("PHOTO_LEDGER_DATA_DIR", str(tmp_path))
+    conn = open_db(Settings().db_path)
+    preferences.save(conn, similar_threshold=3, generic_folders="DCIM")
+    conn.close()
+    runner = CliRunner()
+    assert "threshold of 3: no pairs" in runner.invoke(cli.app, ["match"]).stdout
+    assert "threshold of 6" in runner.invoke(cli.app, ["match", "--threshold", "6"]).stdout

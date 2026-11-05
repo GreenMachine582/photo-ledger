@@ -11,7 +11,6 @@ Done when you can go from an empty database to a built library without the comma
 
 - [ ] Pick folders with a folder explorer instead of typing paths: folder names only, read-only, local use only
 - [ ] Create, run, pause and resume scans in the browser, with live progress and errors
-- [ ] Export the whole catalogue as CSV, and edit the generic folder names and similar threshold on a settings page
 - [ ] Notifications and an activity page for scans, plans, builds and offline sources (needs greentechhub-fastapi
       notifications and audit without sign-in)
 

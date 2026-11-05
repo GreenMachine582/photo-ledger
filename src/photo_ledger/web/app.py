@@ -24,6 +24,7 @@ from photo_ledger.web.htmx import HtmxRedirectMiddleware, back_path
 from photo_ledger.web.routes import (
     catalogue,
     collections,
+    exports,
     files,
     home,
     library,
@@ -34,6 +35,7 @@ from photo_ledger.web.routes import (
     scans,
     sources,
 )
+from photo_ledger.web.routes import settings as settings_routes
 from photo_ledger.web.security import LocalOriginMiddleware
 
 WEB_DIR = Path(__file__).parent
@@ -68,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         {"label": "Library", "url": "/library"},
                     ],
                 },
+                {"label": "Settings", "url": "/settings"},
             ]
         ),
     )
@@ -99,6 +102,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(scans.router)
     app.include_router(match.router)
     app.include_router(catalogue.router)
+    app.include_router(exports.router)
+    app.include_router(settings_routes.router)
 
     @app.exception_handler(PhotoLedgerError)
     async def expected_failure(request: Request, exc: PhotoLedgerError):

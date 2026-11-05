@@ -10,7 +10,7 @@ from pathlib import Path
 import typer
 import uvicorn
 
-from photo_ledger import __version__
+from photo_ledger import __version__, preferences
 from photo_ledger import sources as source_service
 from photo_ledger.actions import dryrun, executor, planner, recovery
 from photo_ledger.collections.folders import refresh_collections
@@ -92,10 +92,10 @@ def match(
     ),
 ) -> None:
     """Find exact duplicates, similar images and name conflicts. Only reads the catalogue."""
-    settings = Settings()
-    limit = settings.photo_ledger_similar_threshold if threshold is None else threshold
     with catalogue() as conn:
-        collections = refresh_collections(conn, settings.photo_ledger_generic_folders)
+        prefs = preferences.effective(conn, Settings())
+        limit = prefs.similar_threshold if threshold is None else threshold
+        collections = refresh_collections(conn, prefs.generic_folders)
         typer.echo(
             f"Collections from folder names: {collections.total_collections} "
             f"({collections.new_collections} new, {collections.new_folders} folders mapped)."
