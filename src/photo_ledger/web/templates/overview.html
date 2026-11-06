@@ -14,7 +14,7 @@
 
 {% block page %}
 {% if not data.sources %}
-{% call gth_empty_state("No sources mapped yet. Map one on the Sources page, or with `photo-ledger source add <path> --label <name>`, then scan it.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
+{% call gth_empty_state("No sources mapped yet. Map one on the Sources page, then scan it on the Scans page.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
 {% else %}
 {% call gth_card(title="Next step: " ~ step.title, card_class="mb-4 gth-next-step") %}
 <p class="mb-{{ '2' if step.url else '0' }}">{{ step.text }}</p>
@@ -43,9 +43,9 @@
 
 <h2 class="h5 mt-4">Scans</h2>
 {% call gth_table(["Scan", "Status", "Sources", ""]) %}
-  {% call(row) gth_table_body(data.scans, empty_message="No scans yet. Create one with `photo-ledger scan create`.", colspan=4) %}
+  {% call(row) gth_table_body(data.scans, empty_message="No scans yet. Save one on the Scans page.", colspan=4) %}
   <tr>
-    <td>{{ row.name }}</td>
+    <td><a href="/scans#scan-{{ row.id }}">{{ row.name }}</a></td>
     <td>{{ row.status }}</td>
     <td>{{ row.labels }}</td>
     <td class="text-end text-nowrap">

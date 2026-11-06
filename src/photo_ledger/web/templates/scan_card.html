@@ -1,0 +1,58 @@
+{#- One scan: its controls, its sources' progress and recent errors. While it runs it polls
+    /scans/<id>/progress and swaps itself; the answer that finds it stopped ends the poll. -#}
+{% from "form.html" import gth_csrf_field %}
+{% from "badge.html" import gth_badge %}
+{% from "progress.html" import gth_progress %}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "toast.html" import gth_alert %}
+{%- set tones = {"complete": "good", "running": "info", "paused": "warn", "offline": "warn", "new": "neutral", "pending": "neutral"} %}
+<div class="card mb-3" id="scan-{{ card.id }}"
+  {%- if card.active %} hx-get="/scans/{{ card.id }}/progress" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><strong>{{ card.name }}</strong> {{ gth_badge("running" if card.active else card.status, tone=tones.get("running" if card.active else card.status, "neutral")) }}</div>
+    <div class="d-flex gap-2 align-items-center">
+      {% if card.active %}
+      <form method="post" action="/scans/{{ card.id }}/pause">
+        {{ gth_csrf_field(csrf_token|default(none)) }}
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Pause</button>
+      </form>
+      {% else %}
+      <form method="post" action="/scans/{{ card.id }}/run" class="d-flex gap-2 align-items-center">
+        {{ gth_csrf_field(csrf_token|default(none)) }}
+        <div class="form-check form-check-inline mb-0 small">
+          <input class="form-check-input" type="checkbox" name="verify" value="true" id="verify-{{ card.id }}">
+          <label class="form-check-label" for="verify-{{ card.id }}">Verify every file</label>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary">{{ "Resume" if card.status in ("paused", "running") else ("Scan again" if card.status == "complete" else "Run") }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card-body">
+    {% if card.active %}
+    {{ gth_progress(none, label="Scanning " ~ card.name, value_text=card.message or "Starting…", size="sm") }}
+    <p class="small text-body-secondary mt-2 mb-3">Pausing stops after the current file and keeps its progress. Nothing is marked missing until a source's pass finishes online.</p>
+    {% endif %}
+    {% if card.failed %}{{ gth_alert("The last run stopped with an error: " ~ card.failed, kind="danger") }}{% endif %}
+    {% if card.offline and not card.active %}{{ gth_alert("Offline: " ~ card.offline|join(", ") ~ ". Nothing in them was marked missing. Reconnect them on the Sources page, then resume.", kind="warning") }}{% endif %}
+    {% if card.status == "complete" and not card.active %}<p class="mb-3">Scanned. <a href="/">Run match on the Overview</a> to find duplicates and similar images.</p>{% endif %}
+    {% call gth_table(["Source", "Status", "Stage", "Files", "Errors", "Finished"]) %}
+      {% call(row) gth_table_body(card.sources, empty_message="No sources.", colspan=6) %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td>{{ gth_badge(row.status, tone=tones.get(row.status, "neutral")) }}{% if row.mode == "verify" %} <span class="small text-body-secondary">verify</span>{% endif %}</td>
+        <td>{{ row.stage or "—" }}</td>
+        <td>{{ "{:,}".format(row.files or 0) }}</td>
+        <td>{{ "{:,}".format(row.errors or 0) }}</td>
+        <td>{{ row.finished or "—" }}</td>
+      </tr>
+      {% endcall %}
+    {% endcall %}
+    {% if card.errors %}
+    <h3 class="h6 mt-3">Recent errors</h3>
+    <ul class="small text-break mb-0">
+      {% for e in card.errors %}<li><code>{{ e.where }}</code> ({{ e.stage }}): {{ e.message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>

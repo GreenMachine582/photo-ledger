@@ -71,8 +71,10 @@ check and never probes a drive itself, as some drives are slow to answer. Set it
   in an applied plan can be forgotten only once that plan is undone, and its rows in the undone journals go with it. A
   source with files copied into the library can't be forgotten while that library is current. It's
   the same as `photo-ledger source`, with the same refusals: overlapping folders, a different drive, or a quarantine
-  inside a source. The page stores only paths you type, and never browses, serves or
-  changes a folder. Creating and running scans stays on the command line.
+  inside a source. The page stores the paths you type or pick in its folder explorer, which lists
+  folder names only, and never serves or changes a folder.
+- **Scans** (`/scans`): Save a scan of some sources, then run, pause and resume it with live progress, offline
+  sources and recent errors. The same as `photo-ledger scan`, and only ever reading.
 - **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
   mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).
 - **Collections** (`/collections`): Rename, merge or hide collections. See [collections.md](collections.md).

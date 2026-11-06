@@ -19,7 +19,7 @@ router = APIRouter(prefix="/sources")
 
 #: Results are shown from this fixed list, never from text in the URL.
 NOTICES = {
-    "added": "Mapped. Mapping never changes the folder: create and run a scan to catalogue it.",
+    "added": "Mapped. Mapping never changes the folder: scan it on the Scans page to catalogue it.",
     "online": "Connected, and on the volume it was mapped on.",
     "offline": "Not connected, or a different drive is at that path. "
     "Nothing in it was marked missing.",

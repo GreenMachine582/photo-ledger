@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "form.html" import gth_csrf_field, gth_form_field %}
+{% from "card.html" import gth_card %}
+{% from "empty_state.html" import gth_empty_state %}
+{% set page_title = "Scans" %}
+{% set page_subtitle = "Catalogue your sources. Scanning only reads them, can pause and resume at any point, and reuses what earlier scans hashed." %}
+
+{% block page %}
+
+{% if labels %}
+{% call gth_card(title="New scan") %}
+<form method="post" action="/scans" class="row g-2 align-items-start">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <div class="col-md-4">{{ gth_form_field("name", "Name", help_text="Such as 'all' or 'old laptop'.", field_class="mb-0") }}</div>
+  <fieldset class="col-md-6">
+    <legend class="form-label fs-6 mb-2">Sources</legend>
+    {% for label in labels %}
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="sources" value="{{ label }}" id="scan-source-{{ loop.index }}"{% if labels|length == 1 %} checked{% endif %}>
+      <label class="form-check-label" for="scan-source-{{ loop.index }}">{{ label }}</label>
+    </div>
+    {% endfor %}
+  </fieldset>
+  <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Save scan</button></div>
+</form>
+{% endcall %}
+{% else %}
+{% call gth_empty_state("Map a folder or drive before scanning it.") %}<a class="btn btn-primary" href="/sources">Map a source</a>{% endcall %}
+{% endif %}
+
+<h2 class="h5 mt-4 mb-3">Saved scans</h2>
+{% for card in cards %}
+{% include "scan_card.html" %}
+{% else %}
+<p class="text-body-secondary">No scans yet.{% if labels %} Save one above, then run it.{% endif %}</p>
+{% endfor %}
+{% endblock %}
