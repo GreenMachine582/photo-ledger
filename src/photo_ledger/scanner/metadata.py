@@ -15,6 +15,9 @@ from PIL import ExifTags, Image, UnidentifiedImageError
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 SUPPORTED_FORMATS = {"JPEG", "PNG"}
+#: Formats read as another: an MPO (multi-picture JPEG, from many phones and 3D or burst cameras)
+#: is a JPEG with extra frames after the first, and the first frame is the photo.
+FORMAT_ALIASES = {"MPO": "JPEG"}
 
 EXIF_IFD = 0x8769
 GPS_IFD = 0x8825
@@ -52,14 +55,20 @@ def is_supported(extension: str) -> bool:
     return extension.lower() in SUPPORTED_EXTENSIONS
 
 
+def needs_redecode(content) -> bool:
+    """A content stored as unsupported in a format that's now read, such as an older MPO row."""
+    stored = content["format"]
+    return stored not in SUPPORTED_FORMATS and FORMAT_ALIASES.get(stored) in SUPPORTED_FORMATS
+
+
 def read_image(path: Path) -> ImageInfo:
     """Decode the image at ``path``. Never raises for a bad image: the error is in the result."""
     info = ImageInfo()
     try:
         with Image.open(path) as image:
-            info.format = image.format
+            info.format = FORMAT_ALIASES.get(image.format, image.format)
             info.width, info.height = image.size
-            if image.format not in SUPPORTED_FORMATS:
+            if info.format not in SUPPORTED_FORMATS:
                 info.decode_error = f"unsupported format {image.format}"
                 return info
             image.load()  # decodes fully, so truncated files fail here

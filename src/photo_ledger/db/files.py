@@ -96,6 +96,13 @@ def content_by_id(conn: sqlite3.Connection, content_id: int) -> sqlite3.Row | No
     return conn.execute("SELECT * FROM contents WHERE id = ?", (content_id,)).fetchone()
 
 
+def update_content(conn: sqlite3.Connection, content_id: int, info: dict) -> None:
+    """Replace what was decoded from a content, such as when its format becomes readable."""
+    fields = {column: info.get(column) for column in CONTENT_INFO_COLUMNS}
+    assignments = ", ".join(f"{column} = :{column}" for column in fields)
+    conn.execute(f"UPDATE contents SET {assignments} WHERE id = :id", {"id": content_id, **fields})
+
+
 def insert_content(conn: sqlite3.Connection, digest: str, size_bytes: int, info: dict) -> int:
     fields = {column: info.get(column) for column in CONTENT_INFO_COLUMNS}
     columns = ", ".join(("blake3", "size_bytes", *fields))

@@ -68,3 +68,6 @@ After a scan, `photo-ledger match` updates the pairs and `photo-ledger report` s
 [duplicate-detection.md](duplicate-detection.md).
 
 Size and `mtime_ns` don't prove content is unchanged, so `scan --verify` re-hashes every file and reconciles differences.
+
+A file stored as unsupported in a format that's read now, such as an MPO catalogued before MPO was read as a JPEG, isn't
+reused on an ordinary rescan. It's hashed and decoded again, and its old decode errors are cleared.
