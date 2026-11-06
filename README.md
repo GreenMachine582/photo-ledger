@@ -46,7 +46,8 @@ uv pip install -e ".[dev]"
 
 Then open <http://127.0.0.1:8765>. On Windows, use `.venv\Scripts\photo-ledger serve`.
 
-Scanning works from the command line. It only ever reads your files:
+Everything from mapping a source to building the library works in the browser, and scans run there with live
+progress, pause and resume. The same steps work from the command line. Scanning only ever reads your files:
 
 ```bash
 photo-ledger source add /media/usb-1/Photos --label usb-1

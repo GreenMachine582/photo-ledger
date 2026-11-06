@@ -26,8 +26,9 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers
 `source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library`, `date` and `export`. The browser
 covers the same sources, match, review, plan, apply, undo, library and capture date steps, the CSV export, the match settings, and removing a saved scan. Every folder field (a source, its new location, a quarantine and the
-library) can be typed or picked with a folder explorer that lists folder names one level at a time. Creating and running scans stays
-on the command line.
+library) can be typed or picked with a folder explorer that lists folder names one level at a time. Scans run as background
+jobs on greentechhub-fastapi's `register_jobs` (`scanner/jobs.py`, `web/routes/scans.py`), each on its own connection,
+with live progress. Pausing cancels the job, so the engine saves `paused` between files, as Ctrl+C does.
 
 In the browser, the Overview names the next step, from mapping a source to a built library (`review/next_step.py`). The
 navigation groups the pages under Catalogue (sources, photos, collections, reports), Review, Organise (plan,

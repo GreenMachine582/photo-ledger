@@ -13,6 +13,7 @@ from greentechhub_fastapi.flash import flash
 from greentechhub_fastapi.registration.csrf import register_csrf
 from greentechhub_fastapi.registration.error_pages import register_error_pages
 from greentechhub_fastapi.registration.flash import register_flash
+from greentechhub_fastapi.registration.jobs import register_jobs
 from greentechhub_fastapi.templating import mount_static_dirs, ui_context
 from greentechhub_ui.navigation import build_nav_items
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -58,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "label": "Catalogue",
                     "children": [
                         {"label": "Sources", "url": "/sources"},
+                        {"label": "Scans", "url": "/scans"},
                         {"label": "Photos", "url": "/catalogue"},
                         {"label": "Collections", "url": "/collections"},
                         {"label": "Reports", "url": "/reports"},
@@ -81,6 +83,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_core(app, settings)
     register_csrf(app, settings)
     register_flash(app, settings)
+    # Scans run as background jobs. Shutting down cancels them, which pauses each cleanly.
+    register_jobs(app, settings)
     register_health(app)
     register_exception_handlers(app)
     register_error_pages(app, settings, templates=templates)

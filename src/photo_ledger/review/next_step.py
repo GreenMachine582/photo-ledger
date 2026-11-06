@@ -33,8 +33,9 @@ def next_step(conn: sqlite3.Connection, data: Overview) -> NextStep:
         return NextStep(
             "scan",
             "Scan your sources",
-            "Catalogue them with `photo-ledger scan create <name> <labels>` and "
-            "`photo-ledger scan run <name>`. Scanning only reads.",
+            "Save a scan of your sources and run it. Scanning only reads, and you can pause it.",
+            "/scans",
+            "Scan sources",
         )
     matched = conn.execute(
         "SELECT EXISTS (SELECT 1 FROM review_pairs) OR EXISTS (SELECT 1 FROM collection_folders)"
