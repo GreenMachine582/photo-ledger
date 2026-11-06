@@ -16,7 +16,7 @@ It runs on your own machine, on `127.0.0.1`. Scans are read-only, nothing is eve
 untouched unless you opt in to quarantine for a source.
 
 > [!NOTE]
-> **Status: M5 done.** Manage sources, the plan and its undo, and the library in the browser, and scan from the CLI. Then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Decisions build a plan that's dry-run, then applied with a journal, crash recovery and undo, moving rejected copies into an opt-in quarantine. Settled pictures are copied into a clean library by year or original path, with XMP sidecars that keep every collection, and with capture dates from EXIF or set by you. Next is v1, where the whole flow works in the browser, and Immich export (M6) follows it. See [TODO.md](TODO.md).
+> **Status: v1 done.** The whole flow works in the browser, from an empty database to a built library: map sources with a folder explorer, run, pause and resume scans with live progress, and follow scans, plans, builds and offline sources on the Activity page and the notification bell. Then review pairs side by side at <http://127.0.0.1:8765/review> with keyboard actions, sessions per scan, a skip list and undo, plus the overview, collections and reports pages. Decisions build a plan that's dry-run, then applied with a journal, crash recovery and undo, moving rejected copies into an opt-in quarantine. Settled pictures are copied into a clean library by year or original path, with XMP sidecars that keep every collection, and with capture dates from EXIF or set by you. Next is Immich export (M6). See [TODO.md](TODO.md).
 
 ## 🧩 Scope
 

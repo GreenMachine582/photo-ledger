@@ -10,9 +10,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.actions import dryrun, executor, planner
+from photo_ledger.activity import count
 from photo_ledger.db import plans as queries
 from photo_ledger.formatting import human_size
-from photo_ledger.web.deps import get_db, notify, render
+from photo_ledger.web.deps import get_db, notify, record, render
 
 router = APIRouter(prefix="/plan")
 
@@ -109,15 +110,34 @@ def rebuild(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
 
 
 @router.post("/apply", dependencies=[Depends(require_csrf)])
-def apply_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+def apply_plan(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """Apply the dry-run plan through the executor, after the page's confirm step."""
     result = executor.apply(conn)
     notice = "applied" if result.status == "applied" else "incomplete"
+    if notice == "applied":
+        summary = (
+            f"Plan applied: {count(result.done, 'copy', 'copies')} moved to quarantine. "
+            "You can undo it."
+        )
+    else:
+        summary = (
+            f"Plan incomplete: {result.done:,} moved, {len(result.failed):,} failed and left "
+            "in place."
+        )
+    record(
+        request,
+        "plan.applied" if notice == "applied" else "plan.incomplete",
+        summary,
+        kind="success" if notice == "applied" else "warning",
+        target=("plan", result.plan_id),
+        link=("Plan", "/plan"),
+        details={"done": result.done, "failed": len(result.failed)},
+    )
     return notify("/plan", NOTICES, notice)
 
 
 @router.post("/undo", dependencies=[Depends(require_csrf)])
-def undo_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+def undo_plan(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """Put back the last applied plan's files through the executor, after the confirm step.
 
     An interrupted undo is finished first, as with ``photo-ledger undo``. A quarantine that's
@@ -125,6 +145,18 @@ def undo_plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """
     result = executor.undo(conn)
     notice = "undone" if result.status == "applied" else "undo-incomplete"
+    record(
+        request,
+        "plan.undone" if notice == "undone" else "plan.undo_incomplete",
+        f"Plan undone: {count(result.done, 'file')} put back."
+        if notice == "undone"
+        else f"Undo incomplete: {count(len(result.failed), 'file')} couldn't be put back, and both "
+        "copies were left alone.",
+        kind="success" if notice == "undone" else "warning",
+        target=("plan", result.plan_id),
+        link=("Plan", "/plan"),
+        details={"done": result.done, "failed": len(result.failed)},
+    )
     return notify("/plan", NOTICES, notice)
 
 

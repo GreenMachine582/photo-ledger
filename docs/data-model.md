@@ -22,6 +22,8 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 | `library` | `id` (always 1), `root_path`, `volume_id`, `layout`, `created_at` | The destination library's folder and layout |
 | `library_entries` | `id`, `content_id`, `file_id`, `rel_path`, `expected_blake3`, `size_bytes`, `state`, `started_at`, `finished_at`, `error`, `sidecar_blake3`, `applied_date` | Which picture is where in the library, and the journal of copying it there |
 | `date_fixes` | `content_id`, `captured_at`, `set_at` | A capture date you set, which wins over EXIF |
+| `notifications` | `id`, `recipient`, `message`, `kind`, `title`, `action_label`, `action_url`, `category`, `created_at`, `read_at` | The notification bell: scans, plans, builds and offline sources, for core's `NotificationStore` |
+| `audit_log` | `id`, `at`, `action`, `actor`, `target_type`, `target_id`, `summary`, `details` | The Activity page, newest first, for core's `AuditStore`. Summaries give labels and counts, never file paths |
 
 ## Notes
 

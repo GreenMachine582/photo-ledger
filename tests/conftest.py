@@ -52,6 +52,29 @@ def ledger(settings, fixture_tree):
 
 
 @pytest.fixture
+def app_client(settings):
+    """A client inside its lifespan, so its event loop (and the scan jobs on it) keeps running."""
+    with TestClient(create_app(settings), base_url="https://127.0.0.1") as client:
+        client.get("/")
+        yield client
+
+
+@pytest.fixture
+def mapped(settings, fixture_tree):
+    """The fixture sources mapped in the app's database, not yet scanned."""
+    from photo_ledger import sources
+
+    root, manifest = fixture_tree
+    conn = open_db(settings.db_path)
+    try:
+        for label in manifest["sources"]:
+            sources.add_source(conn, root / label, label)
+    finally:
+        conn.close()
+    return root, manifest
+
+
+@pytest.fixture
 def web(settings) -> TestClient:
     """A client over https, so the Secure CSRF cookie round-trips as it does in a browser."""
     client = TestClient(create_app(settings), base_url="https://127.0.0.1")

@@ -17,6 +17,7 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `collections/` | Folder names to collections, and inheritance | M2 |
 | `review/` | Decisions, review sessions and what the comparison view shows | M3 |
 | `preferences.py` | The similar threshold and generic folder names saved on the Settings page, over the environment's | v1 |
+| `activity.py` | What happened, for the Activity page and the notification bell, written through `db/activity.py` | v1 |
 | `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
 | `actions/` | Planner, dry run, executor, undo and recovery. Only `executor.py` writes to sources, quarantines and the library | M4, M5 |
@@ -62,9 +63,14 @@ with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `h
 ## GTH packages
 
 `web/app.py` calls `register_logging`, `register_core`, `register_health`, `register_csrf`,
-`register_exception_handlers` and `register_error_pages`. It skips `register_auth` and `register_permissions`, because
-the app has one user on `127.0.0.1` and nothing needs sign-in. SQLite stays on `sqlite3`, which the GTH packages don't
-replace.
+`register_exception_handlers` and `register_error_pages`, plus `register_jobs` for scans and `register_audit` and
+`register_notifications` for the Activity page and the notification bell. `register_auth` runs with
+`AUTH_ADAPTER=single_user`, which `config.Settings` fixes: every request is the one local person, so notifications and
+the activity log work with no sign-in, and there's no login page to fall back on. It skips `register_permissions`.
+SQLite stays on `sqlite3`: `db/activity.py` implements core's notification and audit stores over it, and runs core's
+contract suites in the tests. `activity.record` writes an entry and a notification for each scan outcome, applied or
+undone plan, library build and source found offline. A scan records its own outcome, since a paused scan isn't a
+finished job.
 
 GTH's permissions are role-based and defined in code: `Permission("resource.action")` and `Role` in greentechhub-core,
 and `require_permission` added to each route in greentechhub-fastapi. Only role membership is data (`ROLE_GROUPS`,
