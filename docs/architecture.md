@@ -11,7 +11,7 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | Package | Responsibility | Milestone |
 |---|---|---|
 | `db/` | SQLite setup (WAL, foreign keys), numbered migrations, all queries | M1 |
-| `sources/` | Mapped folders and their device details | M1 |
+| `sources/` | Mapped folders and their device details, and the folder names the browser's folder explorer lists (`folders.py`) | M1, v1 |
 | `scanner/` | Resumable walk, metadata, hashes and verification | M1 |
 | `matching/` | Exact, similar and mismatch checks, stable pairs, scores | M2 |
 | `collections/` | Folder names to collections, and inheritance | M2 |
@@ -25,7 +25,8 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 
 Scanning, matching and file actions don't import FastAPI, so the CLI works without the web layer. The CLI covers
 `source`, `scan`, `match`, `report`, `serve`, `plan`, `apply`, `undo`, `library`, `date` and `export`. The browser
-covers the same sources, match, review, plan, apply, undo, library and capture date steps, the CSV export, the match settings, and removing a saved scan. Creating and running scans stays
+covers the same sources, match, review, plan, apply, undo, library and capture date steps, the CSV export, the match settings, and removing a saved scan. Every folder field (a source, its new location, a quarantine and the
+library) can be typed or picked with a folder explorer that lists folder names one level at a time. Creating and running scans stays
 on the command line.
 
 In the browser, the Overview names the next step, from mapping a source to a built library (`review/next_step.py`). The

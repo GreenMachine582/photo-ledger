@@ -1,7 +1,8 @@
 """The sources page: map, check, reconnect, rename and forget sources, and set their settings.
 
-Everything goes through ``sources.service``, the same as the CLI. The page only stores paths you
-type: it never browses folders, never serves a file and never writes to a source.
+Everything goes through ``sources.service``, the same as the CLI. The page stores the paths you
+type or pick in the folder explorer (``routes/folders.py``, folder names only). It never serves a
+file and never writes to a source.
 """
 
 import sqlite3

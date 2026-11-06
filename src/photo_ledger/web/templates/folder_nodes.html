@@ -1,0 +1,11 @@
+{#- One level of the folder explorer: what /folders returns for a gth_tree's lazy expand. -#}
+{% from "tree.html" import gth_tree_nodes %}
+{{ gth_tree_nodes(nodes, level, tree_id, "single", lazy_url) }}
+{%- if error %}
+<li role="none" class="small text-body-secondary py-1" style="padding-inline-start: calc({{ level }} * 1.25rem)">{{ error }}</li>
+{%- elif empty %}
+<li role="none" class="small text-body-secondary py-1" style="padding-inline-start: calc({{ level }} * 1.25rem)">No folders inside.</li>
+{%- endif %}
+{%- if more %}
+<li role="none" class="small text-body-secondary py-1" style="padding-inline-start: calc({{ level }} * 1.25rem)">{{ "{:,}".format(more) }} more not shown. Type the path instead.</li>
+{%- endif %}
