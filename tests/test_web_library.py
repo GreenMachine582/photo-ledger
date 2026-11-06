@@ -1,5 +1,7 @@
 """The library page, and removing a saved scan from the overview."""
 
+import time
+
 from test_library import YEAR_LAYOUT, library_files, settle_everything
 from test_scanner import snapshot
 from typer.testing import CliRunner
@@ -13,6 +15,22 @@ def post(web, url, **data):
     return web.post(url, data={**data, "csrf_token": web.cookies["gth_csrf"]})
 
 
+HTMX = {"HX-Request": "true"}
+
+
+def wait_for_build(client, timeout=60):
+    """Poll as the Build popup does, until the answer that reloads the page."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        response = client.get("/library/build/progress", headers=HTMX)
+        assert response.status_code == 200
+        if "HX-Redirect" in response.headers:
+            return response
+        assert 'id="build-progress"' in response.text
+        time.sleep(0.05)
+    raise AssertionError("the build never finished")
+
+
 def test_every_action_needs_a_csrf_token(ledger, web):
     conn, root, _ = ledger
     for url in ("/library", "/library/plan", "/library/build", "/scans/1/remove"):
@@ -21,7 +39,8 @@ def test_every_action_needs_a_csrf_token(ledger, web):
     assert conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0] == 1
 
 
-def test_set_plan_and_build_from_the_browser(ledger, web):
+def test_set_plan_and_build_from_the_browser(ledger, app_client):
+    web = app_client  # a build is a background job, which needs the app's lifespan
     conn, root, _ = ledger
     before = snapshot(root)
     folder = root.parent / "library"
@@ -48,7 +67,10 @@ def test_set_plan_and_build_from_the_browser(ledger, web):
     assert 'data-bs-target="#build-library"' in planned.text
     assert queries.counts(conn) == {"pending": len(YEAR_LAYOUT)}
 
-    built = post(web, "/library/build")
+    started = post(web, "/library/build")
+    assert "Building." in started.text
+    wait_for_build(web)
+    built = web.get("/library")
     assert "Built." in built.text
     assert set(library_files(folder)) == set(YEAR_LAYOUT)
     assert queries.counts(conn) == {"done": len(YEAR_LAYOUT)}
@@ -101,3 +123,54 @@ def test_scan_remove_command(ledger, settings, monkeypatch):
     assert "No scans yet" in runner.invoke(cli.app, ["scan", "list"]).stdout
     missing = runner.invoke(cli.app, ["scan", "remove", "all", "--yes"])
     assert missing.exit_code == 1
+
+
+def test_the_build_popup_shows_progress_then_reloads_with_the_result(
+    ledger, app_client, monkeypatch
+):
+    from photo_ledger.actions import executor
+
+    conn, root, _ = ledger
+    folder = root.parent / "library"
+    folder.mkdir()
+    post(app_client, "/library", path=str(folder), layout="year")
+    settle_everything(conn)
+    post(app_client, "/library/plan")
+    before = snapshot(root)
+    seen = []
+    real_build = executor.build_library
+
+    def watched_build(conn, progress=None):
+        def report(done, total, phase):
+            seen.append((done, total, phase))
+            progress(done, total, phase)
+
+        return real_build(conn, progress=report)
+
+    monkeypatch.setattr(executor, "build_library", watched_build)
+    page = app_client.get("/library").text
+    assert 'hx-post="/library/build"' in page and 'hx-target="#build-progress"' in page
+
+    response = app_client.post(
+        "/library/build", data={"csrf_token": app_client.cookies["gth_csrf"]}, headers=HTMX
+    )
+    assert response.status_code == 200
+    assert 'hx-get="/library/build/progress"' in response.text
+    assert 'gth-busy-button" disabled' in response.text and "Building…" in response.text
+    assert 'role="progressbar"' in response.text
+
+    done = wait_for_build(app_client)
+    assert done.headers["HX-Redirect"] == "/library"
+    assert "Built." in app_client.get("/library").text
+    copying = [s for s in seen if s[2] == "copying"]
+    assert [s[0] for s in copying] == list(range(1, len(YEAR_LAYOUT) + 1))
+    assert copying[-1][1] == len(YEAR_LAYOUT)
+    assert set(library_files(folder)) == set(YEAR_LAYOUT)
+    assert snapshot(root) == before
+
+
+def test_a_build_needs_the_csrf_token(ledger, app_client):
+    assert app_client.post("/library/build").status_code == 403
+    assert app_client.get("/library/build/progress", headers=HTMX).headers.get("HX-Redirect") == (
+        "/library"
+    )  # no build ran: the popup just reloads the page

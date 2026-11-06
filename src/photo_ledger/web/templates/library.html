@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "busy_form.html" import busy_form %}
+{% from "busy_button.html" import gth_busy_button %}
 {% from "stat_card.html" import gth_stat_grid %}
 {% from "table.html" import gth_table, gth_table_body %}
 {% from "badge.html" import gth_badge %}
@@ -29,15 +30,25 @@
 
 <div class="d-flex flex-wrap gap-2 mb-3">
   {{ busy_form("/library/plan", "Plan", "Planning…", csrf_token|default(none), btn_class="btn-primary") }}
-  {% if can_build %}
+  {% if can_build and not building %}
   <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#build-library">Build</button>
   {% endif %}
 </div>
 
-{% if can_build %}
+{% if building %}
+{% call gth_card(title="Building the library") %}{% with build = building %}{% include "build_progress.html" %}{% endwith %}{% endcall %}
+{% endif %}
+
+{% if can_build and not building %}
 {% call gth_modal("build-library", title="Build the library?", static_backdrop=True) %}
 <p>{{ to_build }} pictures are copied into {{ library.root_path }}. Each copy is verified by its hash, nothing is overwritten and no original changes.</p>
-{{ busy_form("/library/build", "Build", "Building…", csrf_token|default(none), btn_class="btn-warning", form_class="d-flex justify-content-end gap-2", cancel=True) }}
+<div id="build-progress">
+<form method="post" action="/library/build" hx-post="/library/build" hx-target="#build-progress" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  {{ gth_busy_button("Build", "Building…", btn_class="btn-warning", submit=True) }}
+</form>
+</div>
 {% endcall %}
 {% endif %}
 

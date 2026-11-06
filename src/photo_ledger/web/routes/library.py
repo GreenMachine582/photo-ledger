@@ -6,20 +6,25 @@ to the catalogue, and building copies files through ``actions/executor.py``, nev
 original.
 """
 
+import asyncio
 import sqlite3
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from greentechhub_core.background import JobAlreadyRunning
 from greentechhub_fastapi.auth.csrf import require_csrf
+from greentechhub_fastapi.flash import flash
+from greentechhub_fastapi.jobs import get_job_runner
 
-from photo_ledger.actions import executor, recovery
-from photo_ledger.activity import count
+from photo_ledger.actions import recovery
 from photo_ledger.db import library as queries
+from photo_ledger.db import open_db
 from photo_ledger.formatting import human_size
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
-from photo_ledger.web.deps import get_db, notify, record, render
+from photo_ledger.library.build_job import BUILD_KIND, build_job
+from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/library")
 
@@ -30,7 +35,9 @@ NOTICES = {
     "built": "Built. Every copy was verified by its hash, and no original changed.",
     "incomplete": "Some copies failed, and nothing was left half-written. See the failures below.",
     "problems": "The dry run found problems, so nothing was copied. See them below.",
+    "building": "Building. It carries on if you leave this page, and its result shows here.",
 }
+SAFE = "Nothing was left half-written, and no original changed."
 
 
 def page_context(conn: sqlite3.Connection) -> dict:
@@ -70,8 +77,14 @@ def _done(notice: str) -> RedirectResponse:
 
 
 @router.get("", response_class=HTMLResponse)
-def library_page(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> HTMLResponse:
-    return render(request, "library.html", {**page_context(conn)})
+async def library_page(request: Request) -> HTMLResponse:
+    state = await _build_state(request)
+    building = state if state is not None and state["active"] else None
+    conn = open_db(request.app.state.settings.db_path)  # async: its own connection, in this thread
+    try:
+        return render(request, "library.html", {**page_context(conn), "building": building})
+    finally:
+        conn.close()
 
 
 @router.post("", dependencies=[Depends(require_csrf)])
@@ -89,24 +102,65 @@ def plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
 
 
 @router.post("/build", dependencies=[Depends(require_csrf)])
-def build(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
-    """Build after the page's confirm step, and only after a clean dry run, as the CLI does."""
-    recovery.recover(conn)
-    library_plan.plan_library(conn)
-    if library_plan.check_library(conn):
+async def build(request: Request) -> Response:
+    """Build after the page's confirm step, as a background job. The popup's htmx form gets the
+    progress partial back; a plain form goes back to the page, which shows the same progress.
+
+    The dry run comes first, here, so one with problems (an offline library, say) is refused at
+    once, as before. The job checks again before it copies anything."""
+    if await asyncio.to_thread(_dry_run_problems, request.app.state.settings.db_path):
         return _done("problems")
-    result = executor.build_library(conn)
-    complete = result.status == "complete"
-    record(
-        request,
-        "library.built" if complete else "library.incomplete",
-        f"Library built: {count(result.copied, 'picture')} copied and verified."
-        if complete
-        else f"Library build incomplete: {result.copied:,} copied, {len(result.failed):,} failed. "
-        "Nothing was left half-written.",
-        kind="success" if complete else "warning",
-        target=("library", 1),
-        link=("Library", "/library"),
-        details={"copied": result.copied, "failed": len(result.failed)},
-    )
-    return _done("built" if complete else "incomplete")
+    try:
+        await get_job_runner(request).start(
+            BUILD_KIND,
+            build_job(request.app.state.settings.db_path),
+            label="Build the library",
+            unique=True,
+        )
+    except JobAlreadyRunning:
+        pass  # already building: show that build
+    if request.headers.get("HX-Request") != "true":
+        return _done("building")
+    return render(request, "build_progress.html", {"build": await _build_state(request)})
+
+
+@router.get("/build/progress", response_class=HTMLResponse)
+async def build_progress(request: Request) -> Response:
+    """The popup's live part. Once the build ends, the page reloads with its result."""
+    state = await _build_state(request)
+    if state is not None and state["active"]:
+        return render(request, "build_progress.html", {"build": state})
+    if state is None:
+        return RedirectResponse("/library", status_code=303)
+    if state["error"]:
+        response = RedirectResponse("/library", status_code=303)
+        flash(response, f"The build stopped with an error: {state['error']}. {SAFE}", kind="danger")
+        return response
+    outcome = state["result"].get("status")
+    return _done({"complete": "built", "problems": "problems"}.get(outcome, "incomplete"))
+
+
+def _dry_run_problems(db_path) -> bool:
+    """Finish any interrupted copy, plan, and dry-run, on a connection of this worker thread."""
+    conn = open_db(db_path)
+    try:
+        recovery.recover(conn)
+        library_plan.plan_library(conn)
+        return bool(library_plan.check_library(conn))
+    finally:
+        conn.close()
+
+
+async def _build_state(request: Request) -> dict | None:
+    """The latest build job as the popup shows it, or None when none ran since the app started."""
+    jobs = await get_job_runner(request).jobs(kind=BUILD_KIND, limit=1)
+    if not jobs:
+        return None
+    job = jobs[0]
+    return {
+        "active": job.active,
+        "percent": round(job.fraction * 100) if job.fraction is not None else None,
+        "message": job.message or "Starting…",
+        "result": dict(job.result),
+        "error": job.error if job.state == "failed" else None,
+    }
