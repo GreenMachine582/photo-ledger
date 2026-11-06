@@ -29,9 +29,12 @@ A scan is a saved selection of one or more sources, such as `scan create "Old dr
 - **Conflicts:** Only one scan can process a source at a time. A running scan records a heartbeat as it saves, and
   a run whose heartbeat is more than five minutes old is treated as crashed, so another run can take over.
 - **Running:** `scan run <name>` starts or resumes a scan. Press Ctrl+C to pause after the current file, and run it
-  again to resume. On the Scans page (`/scans`), **Run** or **Resume** starts it as a background job, **Pause** stops
-  it after the current file the same way, and the card shows each source's stage, counts and recent errors while it
-  runs. Closing the app pauses a running scan. A scan whose sources all finished starts a new round. `scan list` and
+  again to resume. On the Scans page (`/scans`), **Save and scan** saves a scan and starts it
+  as a background job. Each saved scan is a row with its status, files, progress and **Run** / **Resume** / **Scan
+  again** or **Pause**, and opens its own page (`/scans/<id>`). That page shows each source as Listing files, Hashing
+  or Done, with a bar while hashing (the total isn't known while listing), its recent errors, and **Remove**. **Pause**
+  stops after the current file, as Ctrl+C does. Closing the app pauses a running scan, which its page then shows as
+  interrupted, ready to resume. A scan whose sources all finished starts a new round. `scan list` and
   `scan status <name>` show progress and recent errors.
 - **Removing:** `scan remove <name>`, or **Remove** beside the scan on the Overview page, forgets a saved scan you no
   longer need, with its progress and errors. Its sources, catalogued files, pairs and decisions all stay, and nothing

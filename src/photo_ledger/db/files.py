@@ -47,6 +47,13 @@ def remove_row(conn: sqlite3.Connection, file_id: int) -> None:
     conn.execute("DELETE FROM files WHERE id = ?", (file_id,))
 
 
+def pending_hash_count(conn: sqlite3.Connection, source_id: int) -> int:
+    """How many of a source's files are still waiting to be hashed."""
+    return conn.execute(
+        "SELECT COUNT(*) FROM files WHERE source_id = ? AND pending_hash = 1", (source_id,)
+    ).fetchone()[0]
+
+
 def pending_hash_ids(conn: sqlite3.Connection, source_id: int) -> list[int]:
     """Files waiting to be hashed, those sharing a size with another file first."""
     rows = conn.execute(

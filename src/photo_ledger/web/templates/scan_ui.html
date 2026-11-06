@@ -1,0 +1,52 @@
+{#- What the scans list and a scan's page share: its status, its actions and its progress bar. -#}
+{% from "form.html" import gth_csrf_field %}
+{% from "badge.html" import gth_badge %}
+{% from "progress.html" import gth_progress %}
+
+{%- set TONES = {"complete": "good", "running": "info", "paused": "warn", "offline": "warn", "new": "neutral", "pending": "neutral"} %}
+{%- set STATUS_TEXT = {"new": "not run yet", "running": "interrupted", "paused": "paused", "complete": "complete"} %}
+
+{% macro scan_status(card) -%}
+{%- if card.active -%}
+<span class="d-inline-flex align-items-center gap-1">{{ gth_badge("running", tone="info") }}<span class="spinner-border spinner-border-sm text-info" role="status"><span class="visually-hidden">Scanning</span></span></span>
+{%- elif card.elsewhere -%}
+{{ gth_badge("running elsewhere", tone="info") }}
+{%- else -%}
+{{ gth_badge(STATUS_TEXT.get(card.status, card.status), tone="warn" if card.interrupted else TONES.get(card.status, "neutral")) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro scan_actions(card, back, csrf_token=none, verify=False, size="btn-sm") -%}
+{#- Run, Resume or Scan again (or Pause while it runs). back: the page to return to. -#}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+  {% if card.active %}
+  <form method="post" action="/scans/{{ card.id }}/pause">
+    {{ gth_csrf_field(csrf_token) }}<input type="hidden" name="back" value="{{ back }}">
+    <button type="submit" class="btn {{ size }} btn-outline-secondary">Pause</button>
+  </form>
+  {% else %}
+  <form method="post" action="/scans/{{ card.id }}/run" class="d-flex gap-2 align-items-center">
+    {{ gth_csrf_field(csrf_token) }}<input type="hidden" name="back" value="{{ back }}">
+    {% if verify %}
+    <div class="form-check form-check-inline mb-0 small">
+      <input class="form-check-input" type="checkbox" name="verify" value="true" id="verify-{{ card.id }}">
+      <label class="form-check-label" for="verify-{{ card.id }}">Verify every file</label>
+    </div>
+    {% endif %}
+    <button type="submit" class="btn {{ size }} btn-primary">{{ "Run scan" if not card.started else ("Scan again" if card.status == "complete" else "Resume") }}</button>
+  </form>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro scan_bar(card, size=none) -%}
+{#- Determinate while hashing; while listing, the total isn't known yet, so it only moves. -#}
+{%- if card.active -%}
+{%- set text = (card.message or "Starting…") ~ (" · " ~ card.elapsed if card.elapsed else "") -%}
+{%- if card.percent is not none -%}
+{{ gth_progress(card.percent, label="Scanning " ~ card.name, value_text=card.percent ~ "% hashed · " ~ text, size=size, striped=True) }}
+{%- else -%}
+{{ gth_progress(none, label="Scanning " ~ card.name, value_text=text, size=size) }}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro %}

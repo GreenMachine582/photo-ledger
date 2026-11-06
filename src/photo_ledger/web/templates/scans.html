@@ -21,7 +21,10 @@
     </div>
     {% endfor %}
   </fieldset>
-  <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Save scan</button></div>
+  <div class="col-md-2 d-grid gap-2"><span class="form-label d-none d-md-block mb-0" aria-hidden="true">&nbsp;</span>
+    <button type="submit" name="run" value="true" class="btn btn-primary">Save and scan</button>
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Save only</button>
+  </div>
 </form>
 {% endcall %}
 {% else %}
@@ -29,9 +32,5 @@
 {% endif %}
 
 <h2 class="h5 mt-4 mb-3">Saved scans</h2>
-{% for card in cards %}
-{% include "scan_card.html" %}
-{% else %}
-<p class="text-body-secondary">No scans yet.{% if labels %} Save one above, then run it.{% endif %}</p>
-{% endfor %}
+{% include "scan_rows.html" %}
 {% endblock %}

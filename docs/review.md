@@ -73,8 +73,8 @@ check and never probes a drive itself, as some drives are slow to answer. Set it
   the same as `photo-ledger source`, with the same refusals: overlapping folders, a different drive, or a quarantine
   inside a source. The page stores the paths you type or pick in its folder explorer, which lists
   folder names only, and never serves or changes a folder.
-- **Scans** (`/scans`): Save a scan of some sources, then run, pause and resume it with live progress, offline
-  sources and recent errors. The same as `photo-ledger scan`, and only ever reading.
+- **Scans** (`/scans`): Save and scan some sources, then run, pause and resume each from the list or its own page
+  (`/scans/<id>`), with live progress, offline sources and recent errors. The same as `photo-ledger scan`, and only ever reading.
 - **Reports** (`/reports`): Every report from `photo-ledger report`, including the date, name and single-source
   mismatches, scoped to a scan and downloadable as CSV. See [duplicate-detection.md](duplicate-detection.md).
 - **Collections** (`/collections`): Rename, merge or hide collections. See [collections.md](collections.md).

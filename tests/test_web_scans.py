@@ -199,3 +199,96 @@ def test_the_job_function_runs_a_scan_on_its_own_connection(settings, conn, mapp
     assert job.state == "succeeded"
     assert job.result["status"] == "complete"
     assert {s["label"] for s in job.result["sources"]} == set(manifest["sources"])
+
+
+def test_save_and_scan_starts_it_on_its_own_page(app_client, conn, mapped):
+    _root, manifest = mapped
+    response = post(app_client, "/scans", name="all", sources=list(manifest["sources"]), run="true")
+    sid = scan_id(conn)
+    assert str(response.url).endswith(f"/scans/{sid}")
+    assert "Scan started" in response.text
+    wait_until_stopped(app_client, sid)
+    assert engine.get_scan(conn, "all")["status"] == "complete"
+    page = app_client.get(f"/scans/{sid}").text
+    assert "Done" in page and "Review this scan" in page and ">Scan again<" in page
+
+
+def test_a_scan_not_run_yet_says_so_and_offers_to_run(app_client, conn, mapped):
+    _root, manifest = mapped
+    post(app_client, "/scans", name="all", sources=list(manifest["sources"]))
+    page = app_client.get(f"/scans/{scan_id(conn)}").text
+    assert "Not run yet." in page and ">Run scan<" in page
+    assert "pending" not in page and ">walk<" not in page
+
+
+def test_the_list_opens_each_scan_and_offers_its_actions(app_client, conn, mapped):
+    _root, manifest = mapped
+    post(app_client, "/scans", name="all", sources=list(manifest["sources"]))
+    sid = scan_id(conn)
+    page = app_client.get("/scans").text
+    assert f'href="/scans/{sid}" class="stretched-link' in page
+    assert ">Open<" in page and ">Run scan<" in page and "not run yet" in page
+    assert 'hx-trigger="every 1s"' not in page  # nothing running, so no polling
+    assert app_client.get("/scans/rows", headers=HTMX).status_code == 286
+
+
+def test_hashing_shows_how_far_it_has_got(app_client, conn, mapped):
+    from photo_ledger.web.routes.scans import scan_card
+
+    _root, manifest = mapped
+    label = next(iter(manifest["sources"]))
+    post(app_client, "/scans", name="one", sources=[label])
+    sid = scan_id(conn, "one")
+    post(app_client, f"/scans/{sid}/run")
+    wait_until_stopped(app_client, sid)
+    source_id = sources.get_source(conn, label)["id"]
+    files = conn.execute("SELECT id FROM files WHERE source_id = ?", (source_id,)).fetchall()
+    with conn:
+        conn.execute("UPDATE files SET pending_hash = 1 WHERE id = ?", (files[0]["id"],))
+        scan_queries.update_scan_source(conn, sid, source_id, status="running", stage="hash")
+    [row] = scan_card(conn, scan_queries.by_id(conn, sid), None)["sources"]
+    assert row["state_text"] == "Hashing"
+    assert row["fraction"] == pytest.approx((len(files) - 1) / len(files))
+    with conn:
+        scan_queries.update_scan_source(conn, sid, source_id, stage="walk")
+    [row] = scan_card(conn, scan_queries.by_id(conn, sid), None)["sources"]
+    assert row["state_text"] == "Listing files" and row["fraction"] is None
+
+
+def test_an_interrupted_scan_and_one_running_elsewhere_are_told_apart(app_client, conn, mapped):
+    _root, manifest = mapped
+    post(app_client, "/scans", name="all", sources=list(manifest["sources"]))
+    sid = scan_id(conn)
+    source_id = sources.get_source(conn, next(iter(manifest["sources"])))["id"]
+    with conn:
+        scan_queries.set_status(conn, sid, "running")
+        scan_queries.update_scan_source(conn, sid, source_id, status="running", heartbeat_at=1)
+    assert "This scan was interrupted" in app_client.get(f"/scans/{sid}").text
+    with conn:
+        scan_queries.update_scan_source(conn, sid, source_id, heartbeat_at=now_ns())
+    page = app_client.get(f"/scans/{sid}").text
+    assert "running elsewhere" in page and "This scan was interrupted" not in page
+
+
+def test_an_unknown_scan_is_a_notice(app_client):
+    response = app_client.get("/scans/999")
+    assert response.status_code == 409 and "There&#39;s no scan 999." in response.text
+
+
+def test_actions_return_only_to_a_scans_page(app_client, conn, mapped):
+    _root, manifest = mapped
+    post(app_client, "/scans", name="all", sources=list(manifest["sources"]))
+    sid = scan_id(conn)
+    listed = post(app_client, f"/scans/{sid}/pause", back="/scans")
+    assert str(listed.url).endswith("/scans")
+    offsite = post(app_client, f"/scans/{sid}/pause", back="https://example.com/")
+    assert str(offsite.url).endswith(f"/scans/{sid}")
+
+
+def test_removing_from_its_page_returns_to_the_list(app_client, conn, mapped):
+    _root, manifest = mapped
+    post(app_client, "/scans", name="all", sources=list(manifest["sources"]))
+    sid = scan_id(conn)
+    response = post(app_client, f"/scans/{sid}/remove", back=f"/scans/{sid}")
+    assert str(response.url).endswith("/scans") and "Scan removed" in response.text
+    assert scan_queries.by_name(conn, "all") is None
