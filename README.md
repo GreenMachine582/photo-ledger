@@ -38,13 +38,29 @@ accounts.
 
 ## 🚀 Quick start
 
+On Linux and macOS:
+
 ```bash
 uv venv
 uv pip install -e ".[dev]"
 .venv/bin/photo-ledger serve
 ```
 
-Then open <http://127.0.0.1:8765>. On Windows, use `.venv\Scripts\photo-ledger serve`.
+On Windows, in PowerShell, the venv's tools are in `.venv\Scripts`:
+
+```powershell
+uv venv
+uv pip install -e ".[dev]"
+.venv\Scripts\photo-ledger serve
+```
+
+Then open <http://127.0.0.1:8765>.
+
+Run it from the venv, as above, or activate the venv first (`source .venv/bin/activate`, or
+`.venv\Scripts\Activate.ps1` on Windows). A bare `photo-ledger` can find another copy on your `PATH`, such as an
+old `pip install --user`. If it fails with `Fatal error in launcher: Unable to create process`, that copy points at a
+Python that's gone: find it with `where.exe photo-ledger` (`which photo-ledger` elsewhere) and delete it, or use the
+venv's.
 
 Everything from mapping a source to building the library works in the browser, and scans run there with live
 progress, pause and resume. The same steps work from the command line. Scanning only ever reads your files:
