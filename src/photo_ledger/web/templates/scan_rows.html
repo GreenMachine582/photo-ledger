@@ -1,0 +1,24 @@
+{#- The scans list. While any scan runs it refreshes itself from /scans/rows every second; the
+    answer that finds nothing running ends the poll. Each row opens the scan's page. -#}
+{% from "table.html" import gth_table, gth_table_body %}
+{% from "scan_ui.html" import scan_status, scan_actions, scan_bar %}
+{%- set any_active = cards|selectattr("active")|list|length > 0 %}
+<div id="scan-list"{% if any_active %} hx-get="/scans/rows" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+{% call gth_table(["Scan", "Status", "Sources", "Files", "Progress", ""]) %}
+  {% call(card) gth_table_body(cards, empty_message="No scans yet.", colspan=6) %}
+  <tr class="position-relative">
+    <td><a href="/scans/{{ card.id }}" class="stretched-link fw-semibold">{{ card.name }}</a></td>
+    <td>{{ scan_status(card) }}</td>
+    <td>{{ card.labels }}</td>
+    <td>{{ "{:,}".format(card.files) }}</td>
+    <td style="min-width: 12rem">{% if card.active %}{{ scan_bar(card, size="sm") }}{% else %}<span class="text-body-secondary">—</span>{% endif %}</td>
+    <td class="text-end text-nowrap position-relative" style="z-index: 2">
+      <div class="d-flex gap-2 justify-content-end align-items-center">
+        {{ scan_actions(card, "/scans", csrf_token|default(none)) }}
+        <a class="btn btn-sm btn-outline-secondary" href="/scans/{{ card.id }}">Open</a>
+      </div>
+    </td>
+  </tr>
+  {% endcall %}
+{% endcall %}
+</div>

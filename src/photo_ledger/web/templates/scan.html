@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "form.html" import gth_csrf_field %}
+{% from "modal.html" import gth_modal %}
+{% set page_title = "Scan " ~ card.name %}
+{% set page_subtitle = "Of " ~ card.labels ~ ". Scanning only reads, and you can pause it and resume it later." %}
+
+{% block page %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm btn-link px-0" href="/scans">← All scans</a>
+  <span class="flex-grow-1"></span>
+  {% if card.started %}<a class="btn btn-sm btn-outline-secondary" href="/review?scan={{ card.name|urlencode }}">Review this scan</a>{% endif %}
+  <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#remove-scan">Remove</button>
+</div>
+
+{% include "scan_card.html" %}
+
+{% call gth_modal("remove-scan", title="Remove scan " ~ card.name ~ "?") %}
+<p>This forgets the saved scan and its progress. Its sources, catalogued files, pairs and decisions stay, nothing is marked missing and nothing on disk changes. A running scan can't be removed.</p>
+<form method="post" action="/scans/{{ card.id }}/remove" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}<input type="hidden" name="back" value="/scans/{{ card.id }}">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Remove scan</button>
+</form>
+{% endcall %}
+{% endblock %}

@@ -45,7 +45,7 @@
 {% call gth_table(["Scan", "Status", "Sources", ""]) %}
   {% call(row) gth_table_body(data.scans, empty_message="No scans yet. Save one on the Scans page.", colspan=4) %}
   <tr>
-    <td><a href="/scans#scan-{{ row.id }}">{{ row.name }}</a></td>
+    <td><a href="/scans/{{ row.id }}">{{ row.name }}</a></td>
     <td>{{ row.status }}</td>
     <td>{{ row.labels }}</td>
     <td class="text-end text-nowrap">
