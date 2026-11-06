@@ -26,6 +26,7 @@ from photo_ledger.web.routes import (
     collections,
     exports,
     files,
+    folders,
     home,
     library,
     match,
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(reports.router)
     app.include_router(plan.router)
     app.include_router(sources.router)
+    app.include_router(folders.router)
     app.include_router(library.router)
     app.include_router(scans.router)
     app.include_router(match.router)

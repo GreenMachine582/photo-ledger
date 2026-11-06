@@ -6,17 +6,18 @@
 {% from "toast.html" import gth_alert %}
 {% from "card.html" import gth_card %}
 {% from "modal.html" import gth_modal %}
+{% from "folder_picker.html" import folder_picker %}
 {% set page_title = "Sources" %}
 {% set page_subtitle = "The folders and drives to scan. Mapping, checking and reconnecting never change them." %}
 
 {% block page %}
 
 {% call gth_card(title="Map a folder or drive") %}
-<form method="post" action="/sources" class="row g-2 align-items-end">
+<form method="post" action="/sources" class="row g-2 align-items-start">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  <div class="col-md-7">{{ gth_form_field("path", "Folder", help_text="Its full path on this computer, such as E:\\Photos or /media/usb-1/Photos.", field_class="mb-0") }}</div>
+  <div class="col-md-7">{{ folder_picker("path", "Folder", "map-path", help_text="Browse to it, or type its full path, such as E:\\Photos or /media/usb-1/Photos.", field_class="mb-0") }}</div>
   <div class="col-md-3">{{ gth_form_field("label", "Label", help_text="A short, unique name.", field_class="mb-0") }}</div>
-  <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Map</button></div>
+  <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Map</button></div>
 </form>
 <p class="text-body-secondary small mt-2 mb-0">A folder inside, or containing, another source or a quarantine is refused. Scan it afterwards with <code>photo-ledger scan create</code> and <code>scan run</code>.</p>
 {% endcall %}
@@ -54,7 +55,7 @@
 {% call gth_modal("reconnect-" ~ row.id, title="Reconnect " ~ row.label) %}
 <form method="post" action="/sources/{{ row.id }}/reconnect">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  {{ gth_form_field("path", "New location", id="reconnect-path-" ~ row.id, help_text="Leave it empty to find the volume it was mapped on, at whatever drive letter or mount path it has now. A folder on a different drive is refused: map that as a new source.") }}
+  {{ folder_picker("path", "New location", "reconnect-path-" ~ row.id, help_text="Leave it empty to find the volume it was mapped on, at whatever drive letter or mount path it has now. A folder on a different drive is refused: map that as a new source.") }}
   <div class="d-flex justify-content-end gap-2">
     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
     <button type="submit" class="btn btn-primary">Reconnect</button>
@@ -70,7 +71,7 @@
 </form>
 <form method="post" action="/sources/{{ row.id }}/quarantine">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  {{ gth_form_field("path", "Quarantine folder", value=row.quarantine or "", id="quarantine-path-" ~ row.id, help_text="Off by default. An existing folder outside every source, on any device. Rejected copies move there only when you apply a plan.") }}
+  {{ folder_picker("path", "Quarantine folder", "quarantine-path-" ~ row.id, value=row.quarantine or "", help_text="Off by default. An existing folder outside every source, on any device. Rejected copies move there only when you apply a plan.") }}
   <div class="d-flex gap-2">
     <button type="submit" class="btn btn-primary">Turn on</button>
     {% if row.quarantine %}<button type="submit" name="off" value="true" class="btn btn-outline-secondary">Turn off</button>{% endif %}
@@ -90,3 +91,5 @@
 {% endcall %}
 {% endfor %}
 {% endblock %}
+
+{% block extra_js %}<script src="/static/folder-picker.js"></script>{% endblock %}
