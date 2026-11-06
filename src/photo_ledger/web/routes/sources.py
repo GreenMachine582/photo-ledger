@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.sources import service
-from photo_ledger.web.deps import get_db, notify, render
+from photo_ledger.web.deps import get_db, notify, record, render
 
 router = APIRouter(prefix="/sources")
 
@@ -89,16 +89,34 @@ def add(
 
 
 @router.post("/check", dependencies=[Depends(require_csrf)])
-def check_all(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+def check_all(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     for source in service.list_sources(conn):
-        service.refresh_state(conn, source)
+        _check(request, conn, source)
     return _done("checked")
 
 
 @router.post("/{source_id}/check", dependencies=[Depends(require_csrf)])
-def check(source_id: int, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+def check(
+    request: Request, source_id: int, conn: sqlite3.Connection = Depends(get_db)
+) -> RedirectResponse:
     source = service.get_source(conn, _label(conn, source_id))
-    return _done("online" if service.refresh_state(conn, source) else "offline")
+    return _done("online" if _check(request, conn, source) else "offline")
+
+
+def _check(request: Request, conn: sqlite3.Connection, source: sqlite3.Row) -> bool:
+    """Refresh a source's state. One that has just gone offline goes on the Activity page."""
+    was_online = source["state"] == "online"
+    online = service.refresh_state(conn, source)
+    if was_online and not online:
+        record(
+            request,
+            "source.offline",
+            f"Source '{source['label']}' is offline. Nothing in it was marked missing.",
+            kind="warning",
+            target=("source", source["id"]),
+            link=("Sources", "/sources"),
+        )
+    return online
 
 
 @router.post("/{source_id}/reconnect", dependencies=[Depends(require_csrf)])

@@ -5,7 +5,6 @@ import threading
 import time
 
 import pytest
-from fastapi.testclient import TestClient
 from greentechhub_core.background import InMemoryJobStore, JobRunner
 from test_scanner import snapshot
 
@@ -14,17 +13,8 @@ from photo_ledger.db import now_ns, open_db
 from photo_ledger.db import scans as scan_queries
 from photo_ledger.scanner import engine
 from photo_ledger.scanner import jobs as scan_jobs
-from photo_ledger.web.app import create_app
 
 HTMX = {"HX-Request": "true"}
-
-
-@pytest.fixture
-def app_client(settings):
-    """A client inside its lifespan, so its event loop (and the scan jobs on it) keeps running."""
-    with TestClient(create_app(settings), base_url="https://127.0.0.1") as client:
-        client.get("/")
-        yield client
 
 
 @pytest.fixture
@@ -32,14 +22,6 @@ def conn(settings):
     connection = open_db(settings.db_path)
     yield connection
     connection.close()
-
-
-@pytest.fixture
-def mapped(conn, fixture_tree):
-    root, manifest = fixture_tree
-    for label in manifest["sources"]:
-        sources.add_source(conn, root / label, label)
-    return root, manifest
 
 
 def post(client, url, **data):

@@ -2,6 +2,7 @@
 
 import secrets
 from pathlib import Path
+from typing import Literal
 
 from greentechhub_core.config import GTHBaseSettings
 from platformdirs import user_data_path
@@ -22,6 +23,8 @@ class Settings(GTHBaseSettings):
 
     # GTH requires a key, but nothing here outlives the process: no sign-in, no sessions.
     secret_key: str = Field(default_factory=lambda: secrets.token_hex(32))
+    #: One person on 127.0.0.1 and no sign-in. Fixed: the app has no login page to fall back on.
+    auth_adapter: Literal["single_user"] = "single_user"
     photo_ledger_data_dir: Path = Field(default_factory=_default_data_dir)
     photo_ledger_port: int = 8765
     #: Largest pHash Hamming distance, out of 64 bits, that counts as a similar image.

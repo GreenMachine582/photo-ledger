@@ -45,6 +45,7 @@ The app binds to `127.0.0.1`, but any website you visit can make your browser se
 | State-changing routes need a CSRF token | `register_csrf` and `require_csrf` |
 | No cross-origin access | CORS has no allowed origins |
 | No arbitrary paths | The image route serves only registered files |
+| No sign-in, by design | `AUTH_ADAPTER=single_user`, fixed in `config.Settings`: anyone who can reach the app is its one user, which is why it binds to `127.0.0.1` only. Marking notifications read needs the CSRF token like every other state-changing route |
 | Folder explorer: names only, read-only | `GET /folders` lists one level of subfolder names with `os.scandir`, never a file, and skips hidden, system and linked folders (`sources/folders.py`). It answers only htmx requests from this app's pages: `HX-Request` must be set, a custom header a cross-site page can't send without a preflight, and `Sec-Fetch-Site` mustn't name another site |
 
 The CSRF cookie is `Secure`. Chromium, Firefox and Edge all send it to `127.0.0.1` over plain HTTP, which this project

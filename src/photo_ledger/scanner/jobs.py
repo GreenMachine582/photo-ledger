@@ -12,6 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from photo_ledger import activity
 from photo_ledger.db import open_db
 from photo_ledger.scanner import engine
 
@@ -38,8 +39,57 @@ def scan_job(db_path: Path, name: str, *, verify: bool = False) -> Callable[[Any
                 should_stop=lambda: ctx.cancelled,
                 progress=progress,
             )
+        except Exception as exc:
+            activity.record(
+                db_path,
+                "scan.failed",
+                f"Scan '{name}' stopped with an error: {exc}",
+                kind="danger",
+                target=("scan", name),
+                link=("Scans", "/scans"),
+            )
+            raise
         finally:
             conn.close()
+        _record(db_path, result)
         return dataclasses.asdict(result)
 
     return run
+
+
+def _record(db_path: Path, result: engine.ScanResult) -> None:
+    """The scan's outcome in the activity log and the notification bell."""
+    name, target = result.name, ("scan", result.name)
+    offline = [s.label for s in result.sources if s.status == "offline"]
+    if result.status == "complete":
+        listed = sum(s.seen for s in result.sources)
+        errors = sum(s.errors for s in result.sources)
+        activity.record(
+            db_path,
+            "scan.completed",
+            f"Scan '{name}' complete: {activity.count(listed, 'file')} listed, "
+            f"{activity.count(errors, 'error')}.",
+            kind="warning" if errors else "success",
+            target=target,
+            link=("Find duplicates", "/"),
+            details={"listed": listed, "errors": errors},
+        )
+    elif offline:
+        activity.record(
+            db_path,
+            "scan.paused",
+            f"Scan '{name}' paused: {', '.join(offline)} offline. Nothing was marked missing.",
+            kind="warning",
+            target=target,
+            link=("Sources", "/sources"),
+            details={"offline": offline},
+        )
+    elif result.sources:
+        activity.record(
+            db_path,
+            "scan.paused",
+            f"Scan '{name}' paused. Its progress is saved: resume it on the Scans page.",
+            kind="info",
+            target=target,
+            link=("Scans", "/scans"),
+        )

@@ -11,6 +11,7 @@ from fastapi import Request
 from fastapi.responses import RedirectResponse, Response
 from greentechhub_fastapi.flash import FLASH_COOKIE_NAME, flash, get_flashes
 
+from photo_ledger import activity
 from photo_ledger.db import open_db
 
 
@@ -24,6 +25,11 @@ def get_db(request: Request) -> Iterator[sqlite3.Connection]:
 
 #: Results that went wrong, shown as warnings rather than successes.
 WARNINGS = {"incomplete", "problems", "undo-incomplete", "offline", "nothing"}
+
+
+def record(request: Request, action: str, summary: str, **kwargs) -> None:
+    """Log what a route did on the Activity page, and notify the user. See ``activity.record``."""
+    activity.record(request.app.state.settings.db_path, action, summary, **kwargs)
 
 
 def notify(url: str, notices: dict[str, str], key: str) -> RedirectResponse:

@@ -14,11 +14,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
 from photo_ledger.actions import executor, recovery
+from photo_ledger.activity import count
 from photo_ledger.db import library as queries
 from photo_ledger.formatting import human_size
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
-from photo_ledger.web.deps import get_db, notify, render
+from photo_ledger.web.deps import get_db, notify, record, render
 
 router = APIRouter(prefix="/library")
 
@@ -88,11 +89,24 @@ def plan(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
 
 
 @router.post("/build", dependencies=[Depends(require_csrf)])
-def build(conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
+def build(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> RedirectResponse:
     """Build after the page's confirm step, and only after a clean dry run, as the CLI does."""
     recovery.recover(conn)
     library_plan.plan_library(conn)
     if library_plan.check_library(conn):
         return _done("problems")
     result = executor.build_library(conn)
-    return _done("built" if result.status == "complete" else "incomplete")
+    complete = result.status == "complete"
+    record(
+        request,
+        "library.built" if complete else "library.incomplete",
+        f"Library built: {count(result.copied, 'picture')} copied and verified."
+        if complete
+        else f"Library build incomplete: {result.copied:,} copied, {len(result.failed):,} failed. "
+        "Nothing was left half-written.",
+        kind="success" if complete else "warning",
+        target=("library", 1),
+        link=("Library", "/library"),
+        details={"copied": result.copied, "failed": len(result.failed)},
+    )
+    return _done("built" if complete else "incomplete")
