@@ -35,7 +35,9 @@ In the browser, the Overview names the next step, from mapping a source to a bui
 navigation groups the pages under Catalogue (sources, photos, collections, reports), Review, Organise (plan,
 library) and Settings. Each action redirects with its result as a toast, never as text in the URL. Long actions use busy buttons:
 htmx posts the form, and `web/htmx.py` turns the redirect into a full page load. A refusal goes back to the page it
-came from, as a toast.
+came from, as a toast, and a plain form gets a notice page. A form with a missing or malformed field is refused the
+same way, with a sentence naming the field (`web/errors.py`) instead of FastAPI's JSON. Required fields are also
+marked `required`, so the browser asks for them before anything is sent.
 
 Runtime data lives outside the repo, in the OS application data folder from `platformdirs`: `photo-ledger.db`,
 thumbnails and logs. Besides the GTH packages, the dependencies are `fastapi`, `uvicorn`, `typer` and `platformdirs`,

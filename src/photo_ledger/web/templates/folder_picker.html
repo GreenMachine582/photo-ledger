@@ -1,12 +1,12 @@
 {% from "form.html" import gth_form_field %}
 {% from "tree.html" import gth_tree %}
 
-{% macro folder_picker(name, label, id, value=None, help_text=None, field_class="mb-3") %}
+{% macro folder_picker(name, label, id, value=None, help_text=None, field_class="mb-3", input_attrs=None) %}
 {#- A folder field: type the path, or pick it from "Browse folders", which lists folder names on
     this computer one level at a time (/folders). Picking fills the field. Without JavaScript it's
     a plain text field. The page loads /static/folder-picker.js. -#}
 <div class="{{ field_class }}">
-  {{ gth_form_field(name, label, value=value, id=id, help_text=help_text, field_class="mb-1") }}
+  {{ gth_form_field(name, label, value=value, id=id, help_text=help_text, field_class="mb-1", input_attrs=input_attrs) }}
   <details class="pl-folder-browse" data-folder-for="{{ id }}">
     <summary class="small">Browse folders…</summary>
     <div class="border rounded mt-1 p-1 overflow-auto" style="max-height: 18rem"

@@ -15,7 +15,7 @@
 <form method="post" action="/settings">
   {{ gth_csrf_field(csrf_token|default(none)) }}
   <p class="mb-1">Similar threshold {{ origin("similar_threshold") }}</p>
-  {{ gth_form_field("similar_threshold", "Largest pHash distance, out of 64 bits, that counts as a similar image", value=prefs.similar_threshold, type="number", min=minimum, max=maximum, step=1, help_text="Lower finds fewer, closer matches. 8 is the default. Similar images are never resolved automatically.") }}
+  {{ gth_form_field("similar_threshold", "Largest pHash distance, out of 64 bits, that counts as a similar image", value=prefs.similar_threshold, type="number", min=minimum, max=maximum, step=1, input_attrs={"required": "required"}, help_text="Lower finds fewer, closer matches. 8 is the default. Similar images are never resolved automatically.") }}
   <p class="mb-1">Generic folder names {{ origin("generic_folders") }}</p>
   {{ gth_form_field("generic_folders", "Folder names that never become collections, one per line", value=prefs.generic_folders|join("\n"), type="textarea", rows=6, help_text="Matched ignoring case. The defaults are " ~ default_folders ~ ".") }}
   <p class="small text-body-secondary">Both apply at the next match. A match never reopens a finished review unless a file's content changed.</p>

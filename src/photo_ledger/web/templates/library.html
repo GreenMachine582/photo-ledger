@@ -73,7 +73,7 @@
 {% call gth_card(title="Change the library" if library else "Choose the library") %}
 <form method="post" action="/library" class="row g-2 align-items-start">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  <div class="col-md-7">{{ folder_picker("path", "Folder", "library-path", value=library.root_path if library else "", help_text="An existing folder outside every source and quarantine. Browse to it, or type its path.", field_class="mb-0") }}</div>
+  <div class="col-md-7">{{ folder_picker("path", "Folder", "library-path", input_attrs={"required": "required"}, value=library.root_path if library else "", help_text="An existing folder outside every source and quarantine. Browse to it, or type its path.", field_class="mb-0") }}</div>
   {%- set layout_options = [("year", "Year (YYYY/Collection/)"), ("original", "Original (source/path)")] %}
   <div class="col-md-3">{{ gth_select("layout", "Layout", layout_options, value=library.layout if library else "year", field_class="mb-0") }}</div>
   <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Save</button></div>

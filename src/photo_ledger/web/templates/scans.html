@@ -11,7 +11,7 @@
 {% call gth_card(title="New scan") %}
 <form method="post" action="/scans" class="row g-2 align-items-start">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  <div class="col-md-4">{{ gth_form_field("name", "Name", help_text="Such as 'all' or 'old laptop'.", field_class="mb-0") }}</div>
+  <div class="col-md-4">{{ gth_form_field("name", "Name", help_text="Such as 'all' or 'old laptop'.", field_class="mb-0", input_attrs={"required": "required"}) }}</div>
   <fieldset class="col-md-6">
     <legend class="form-label fs-6 mb-2">Sources</legend>
     {% for label in labels %}
