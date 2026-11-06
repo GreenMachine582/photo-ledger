@@ -406,8 +406,14 @@ class _SourceRun:
             and existing["status"] in REUSABLE_STATUSES
         ):
             status = existing["status"]
-            if status == "missing":
+            content = None
+            if status in ("missing", "unsupported"):
                 content = file_queries.content_by_id(self.conn, existing["content_id"])
+            if status == "unsupported" and metadata.needs_redecode(content):
+                # Its format is read now, so hash it again to decode it.
+                file_queries.update(self.conn, existing["id"], pending_hash=1, **seen)
+                return
+            if status == "missing":
                 status = content_status(content)
             file_queries.update(self.conn, existing["id"], status=status, pending_hash=0, **seen)
             self.result.reused += 1
@@ -454,6 +460,7 @@ class _SourceRun:
             return
 
         content = file_queries.content_by_blake3(self.conn, digest)
+        redecoded = False
         if content is None:
             info = metadata.read_image(path)
             if info.decode_error:
@@ -465,12 +472,26 @@ class _SourceRun:
             )
             content = file_queries.content_by_id(self.conn, content_id)
             self.result.new_contents += 1
+        elif metadata.needs_redecode(content):
+            info = metadata.read_image(path)
+            scan_queries.clear_decode_errors(self.conn, self.source_id, rel_path)
+            if info.decode_error:
+                self._error(rel_path, "decode", info.decode_error)
+            if info.exif_error:
+                self._error(rel_path, "exif", info.exif_error)
+            file_queries.update_content(self.conn, content["id"], asdict(info))
+            content = file_queries.content_by_id(self.conn, content["id"])
+            redecoded = True
         if row["content_id"] is not None and row["content_id"] != content["id"]:
             self.result.content_changes.append(rel_path)
 
+        status = content_status(content)
+        if row["status"] == "unsupported" and status != "unsupported" and not redecoded:
+            # Another copy of this content was read again: its old errors no longer apply.
+            scan_queries.clear_decode_errors(self.conn, self.source_id, rel_path)
         update = {
             "content_id": content["id"],
-            "status": content_status(content),
+            "status": status,
             "pending_hash": 0,
             "size_bytes": before.st_size,
             "mtime_ns": before.st_mtime_ns,

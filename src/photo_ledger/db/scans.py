@@ -96,6 +96,15 @@ def add_error(
     )
 
 
+def clear_decode_errors(conn: sqlite3.Connection, source_id: int, rel_path: str) -> None:
+    """Forget a file's earlier decode and EXIF errors, once it has been read again."""
+    conn.execute(
+        "DELETE FROM scan_errors WHERE source_id = ? AND rel_path = ? "
+        "AND stage IN ('decode', 'exif')",
+        (source_id, rel_path),
+    )
+
+
 def errors(conn: sqlite3.Connection, scan_id: int, limit: int = 20) -> list[sqlite3.Row]:
     return conn.execute(
         """

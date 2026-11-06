@@ -49,7 +49,7 @@ with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `h
 |---|---|---|---|
 | Review UI | FastAPI and greentechhub-ui, bound to `127.0.0.1` | Browsers already render, zoom and cache images well, and it matches hardware-ledger | Tkinter: manual image scaling and harder UI tests |
 | Datastore | SQLite via the standard library `sqlite3` | Handles queries, indexes and resumable scans in one local file | CSV: no indexes or safe partial updates. `export --csv` is offered instead |
-| Formats | JPEG and PNG for the MVP | Keeps decoding, previews and tests small | HEIC, WebP, RAW and video, which can follow later |
+| Formats | JPEG (including MPO multi-picture JPEGs, read from their first frame) and PNG for the MVP | Keeps decoding, previews and tests small | HEIC, WebP, RAW and video, which can follow later |
 | Storage | One scanner for all four storage types, with device details recorded per source | No storage assumptions are needed up front | A separate storage abstraction per type |
 | Review unit | Stable pairs, not rebuilt groups | A rescan can add pairs without disturbing earlier decisions | Clustered groups, which change shape when a file is added |
 | Review scope | One saved scan of any set of sources, or all scans | You can back out of a scan and start another without losing progress | Separate review data per scan |
