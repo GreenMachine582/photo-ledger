@@ -104,7 +104,10 @@ def test_applying_and_undoing_a_plan_are_logged(ready, web, settings):  # noqa: 
     assert [n.kind for n in notices(settings)] == ["success", "success"]
 
 
-def test_building_the_library_is_logged(ledger, web, settings):
+def test_building_the_library_is_logged(ledger, app_client, settings):
+    from test_web_library import wait_for_build
+
+    web = app_client
     conn, root, _ = ledger
     folder = root.parent / "library"
     folder.mkdir()
@@ -112,6 +115,7 @@ def test_building_the_library_is_logged(ledger, web, settings):
     settle_everything(conn)
     before = snapshot(root)
     post(web, "/library/build")
+    wait_for_build(web)
     [entry] = SqliteAuditStore(settings.db_path).entries_sync()
     assert entry.action == "library.built"
     assert entry.summary.startswith("Library built:")

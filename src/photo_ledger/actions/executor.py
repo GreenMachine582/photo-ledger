@@ -18,6 +18,7 @@ import os
 import shutil
 import sqlite3
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -363,8 +364,15 @@ def _copy_into_library(
     return None
 
 
-def build_library(conn: sqlite3.Connection) -> BuildResult:
-    """Copy every planned picture into the library. Originals are never changed or removed."""
+def build_library(
+    conn: sqlite3.Connection, progress: Callable[[int, int, str], None] | None = None
+) -> BuildResult:
+    """Copy every planned picture into the library. Originals are never changed or removed.
+
+    ``progress(done, total, phase)`` is called after each picture: ``copying`` while copies are
+    made, then ``finishing`` while every library copy's sidecar and date are brought up to date.
+    """
+    report = progress or (lambda _done, _total, _phase: None)
     from photo_ledger.actions.recovery import recover
 
     recover(conn)
@@ -372,19 +380,23 @@ def build_library(conn: sqlite3.Connection) -> BuildResult:
     if not library_online(library):
         raise PlanError(f"The library is offline. Connect {library_name(library)}.")
     result = BuildResult("building")
-    for entry in library_queries.entries(conn, "pending", "failed"):
+    to_copy = library_queries.entries(conn, "pending", "failed")
+    for done, entry in enumerate(to_copy, start=1):
         error = _copy_into_library(conn, library, entry)
         if error is None:
             result.copied += 1
         else:
             result.failed.append(f"{entry['source_label']}/{entry['source_rel_path']}: {error}")
+        report(done, len(to_copy), "copying")
     # Sidecars and dates follow the catalogue, so a renamed collection or a date you set reaches
     # files copied in earlier builds too.
     extras = sidecars.Extras(conn, library["layout"])
-    for entry in library_queries.entries(conn, "done"):
+    built = library_queries.entries(conn, "done")
+    for done, entry in enumerate(built, start=1):
         try:
             _finish_library_file(conn, library, entry, extras, result)
         except OSError as exc:
             result.failed.append(f"library/{entry['rel_path']}: {exc}")
+        report(done, len(built), "finishing")
     result.status = "incomplete" if result.failed else "complete"
     return result

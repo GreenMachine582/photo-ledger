@@ -473,3 +473,17 @@ def test_cli_sets_and_clears_dates(library, settings, monkeypatch):
     )
     refused = runner.invoke(cli.app, ["date", "set", "camera/screenshots/shot_01.png", "soon"])
     assert refused.exit_code == 1
+
+
+def test_a_build_reports_each_copy_then_each_sidecar(library):
+    conn, _root, folder = library
+    settle_everything(conn)
+    settings.set_library(conn, folder, "year")
+    plan.plan_library(conn)
+    calls = []
+    result = executor.build_library(conn, progress=lambda *call: calls.append(call))
+    copying = [(done, total) for done, total, phase in calls if phase == "copying"]
+    finishing = [(done, total) for done, total, phase in calls if phase == "finishing"]
+    assert copying == [(n, result.copied) for n in range(1, result.copied + 1)]
+    assert finishing[-1] == (len(finishing), len(finishing)) and len(finishing) == result.copied
+    assert calls.index((1, len(finishing), "finishing")) > calls.index(copying[-1] + ("copying",))

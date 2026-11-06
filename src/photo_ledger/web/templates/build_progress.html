@@ -1,0 +1,20 @@
+{#- The Build popup while the library builds: a bar, what it's doing, and the Building… button,
+    which stays disabled so it keeps spinning. It polls /library/build/progress every second; the
+    answer once the build ends reloads the page with its result. -#}
+{% from "progress.html" import gth_progress %}
+<div id="build-progress" hx-get="/library/build/progress" hx-trigger="every 1s" hx-swap="outerHTML">
+  <div class="mb-2">
+  {%- if build and build.percent is not none %}
+  {{ gth_progress(build.percent, label="Building the library", value_text=build.message, striped=True) }}
+  {%- else %}
+  {{ gth_progress(none, label="Building the library", value_text=(build.message if build else "Starting…")) }}
+  {%- endif %}
+  </div>
+  <p class="small text-body-secondary">Each copy is verified by its hash before it's kept. You can close this: the build carries on, and its result shows on this page and in Activity.</p>
+  <div class="d-flex justify-content-end">
+    <button type="button" class="btn btn-warning gth-busy-button" disabled>
+      <span class="gth-busy-button-idle">Build</span>
+      <span class="gth-busy-button-busy" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Building…</span>
+    </button>
+  </div>
+</div>

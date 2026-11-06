@@ -29,7 +29,9 @@ Scanning, matching and file actions don't import FastAPI, so the CLI works witho
 covers the same sources, match, review, plan, apply, undo, library and capture date steps, the CSV export, the match settings, and removing a saved scan. Every folder field (a source, its new location, a quarantine and the
 library) can be typed or picked with a folder explorer that lists folder names one level at a time. Scans run as background
 jobs on greentechhub-fastapi's `register_jobs` (`scanner/jobs.py`, `web/routes/scans.py`), each on its own connection,
-with live progress. Pausing cancels the job, so the engine saves `paused` between files, as Ctrl+C does.
+with live progress. Pausing cancels the job, so the engine saves `paused` between files, as Ctrl+C does. Building the
+library is a job too (`library/build_job.py`): the route dry-runs first and refuses on problems, then the Build
+popup shows a bar of copies made, from `executor.build_library`'s progress callback, and reloads with the result.
 
 In the browser, the Overview names the next step, from mapping a source to a built library (`review/next_step.py`). The
 navigation groups the pages under Catalogue (sources, photos, collections, reports), Review, Organise (plan,
@@ -65,7 +67,7 @@ with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `h
 ## GTH packages
 
 `web/app.py` calls `register_logging`, `register_core`, `register_health`, `register_csrf`,
-`register_exception_handlers` and `register_error_pages`, plus `register_jobs` for scans and `register_audit` and
+`register_exception_handlers` and `register_error_pages`, plus `register_jobs` for scans and library builds, and `register_audit` and
 `register_notifications` for the Activity page and the notification bell. `register_auth` runs with
 `AUTH_ADAPTER=single_user`, which `config.Settings` fixes: every request is the one local person, so notifications and
 the activity log work with no sign-in, and there's no login page to fall back on. It skips `register_permissions`.
