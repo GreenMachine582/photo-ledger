@@ -4,7 +4,9 @@
 
 Only JPEG and PNG are fully processed in the MVP. That includes MPO, the multi-picture JPEG that many phones and 3D or
 burst cameras write: it's read from its first frame, which is the photo, and catalogued as a JPEG. Other files are
-counted as unsupported, not hashed or matched.
+counted as unsupported, not hashed or matched. So are macOS AppleDouble sidecars (`._IMG_0001.jpg`), which a Mac
+writes beside each file it copies to a FAT or exFAT drive or a network share: they keep the photo's name but hold only
+Finder metadata.
 
 ## Pipeline
 
