@@ -55,6 +55,17 @@ def is_supported(extension: str) -> bool:
     return extension.lower() in SUPPORTED_EXTENSIONS
 
 
+def is_apple_double(name: str) -> bool:
+    """A macOS AppleDouble sidecar, ``._<name>``: Finder metadata a Mac writes beside each file it
+    copies to a drive or share that can't hold it. It keeps the photo's name but holds no image."""
+    return name.startswith("._")
+
+
+def is_photo(name: str) -> bool:
+    """A file to hash and decode: a supported extension, and not an AppleDouble sidecar."""
+    return is_supported(Path(name).suffix) and not is_apple_double(name)
+
+
 def needs_redecode(content) -> bool:
     """A content stored as unsupported in a format that's now read, such as an older MPO row."""
     stored = content["format"]

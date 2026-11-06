@@ -363,7 +363,7 @@ class _SourceRun:
     def _record(self, entry: WalkEntry) -> None:
         path = PurePosixPath(entry.rel_path)
         extension = path.suffix.lower()
-        supported = metadata.is_supported(extension)
+        supported = metadata.is_photo(path.name)
         existing = file_queries.by_path(self.conn, self.source_id, entry.rel_path)
         seen = {
             "size_bytes": entry.size_bytes,
@@ -391,6 +391,9 @@ class _SourceRun:
             )
             return
         if not supported:
+            if existing["status"] != "unsupported":
+                # Read as a photo before, like an AppleDouble sidecar: its errors no longer apply.
+                scan_queries.clear_decode_errors(self.conn, self.source_id, entry.rel_path)
             file_queries.update(
                 self.conn, existing["id"], status="unsupported", pending_hash=0, **seen
             )

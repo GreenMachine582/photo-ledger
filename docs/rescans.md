@@ -70,4 +70,6 @@ After a scan, `photo-ledger match` updates the pairs and `photo-ledger report` s
 Size and `mtime_ns` don't prove content is unchanged, so `scan --verify` re-hashes every file and reconciles differences.
 
 A file stored as unsupported in a format that's read now, such as an MPO catalogued before MPO was read as a JPEG, isn't
-reused on an ordinary rescan. It's hashed and decoded again, and its old decode errors are cleared.
+reused on an ordinary rescan. It's hashed and decoded again, and its old decode errors are cleared. The other way round,
+a file that's no longer read as a photo, such as an AppleDouble `._` sidecar an older version decoded as corrupt,
+becomes unsupported, and its errors are cleared too.
