@@ -27,7 +27,7 @@
     {% call gth_card(title="Set the capture date") %}
     <form method="post" action="/catalogue/{{ photo.content_id }}/date" class="row g-2 align-items-end">
       {{ gth_csrf_field(csrf_token|default(none)) }}
-      <div class="col-sm-8">{{ gth_form_field("value", "Taken", value=photo.taken if photo.date_source == "manual" else none, help_text="YYYY-MM-DD, or YYYY-MM-DDTHH:MM[:SS]. Every copy shares it.", field_class="mb-0") }}</div>
+      <div class="col-sm-8">{{ gth_form_field("value", "Taken", value=photo.taken if photo.date_source == "manual" else none, input_attrs={"required": "required"}, help_text="YYYY-MM-DD, or YYYY-MM-DDTHH:MM[:SS]. Every copy shares it.", field_class="mb-0") }}</div>
       <div class="col-sm-4"><button type="submit" class="btn btn-primary w-100">Save date</button></div>
     </form>
     {% if photo.date_source == "manual" %}

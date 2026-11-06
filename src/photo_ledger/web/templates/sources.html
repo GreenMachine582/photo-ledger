@@ -15,8 +15,8 @@
 {% call gth_card(title="Map a folder or drive") %}
 <form method="post" action="/sources" class="row g-2 align-items-start">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  <div class="col-md-7">{{ folder_picker("path", "Folder", "map-path", help_text="Browse to it, or type its full path, such as E:\\Photos or /media/usb-1/Photos.", field_class="mb-0") }}</div>
-  <div class="col-md-3">{{ gth_form_field("label", "Label", help_text="A short, unique name.", field_class="mb-0") }}</div>
+  <div class="col-md-7">{{ folder_picker("path", "Folder", "map-path", input_attrs={"required": "required"}, help_text="Browse to it, or type its full path, such as E:\\Photos or /media/usb-1/Photos.", field_class="mb-0") }}</div>
+  <div class="col-md-3">{{ gth_form_field("label", "Label", help_text="A short, unique name.", field_class="mb-0", input_attrs={"required": "required"}) }}</div>
   <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Map</button></div>
 </form>
 <p class="text-body-secondary small mt-2 mb-0">A folder inside, or containing, another source or a quarantine is refused. Scan it afterwards on the <a href="/scans">Scans</a> page.</p>
@@ -66,7 +66,7 @@
 {% call gth_modal("settings-" ~ row.id, title=row.label ~ " settings") %}
 <form method="post" action="/sources/{{ row.id }}/priority" class="mb-4">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  {{ gth_form_field("priority", "Keeper priority", value=row.priority, type="number", step=1, id="priority-" ~ row.id, help_text="Higher numbers are preferred as keepers. Default 0.") }}
+  {{ gth_form_field("priority", "Keeper priority", value=row.priority, type="number", step=1, id="priority-" ~ row.id, input_attrs={"required": "required"}, help_text="Higher numbers are preferred as keepers. Default 0.") }}
   <button type="submit" class="btn btn-primary">Save priority</button>
 </form>
 <form method="post" action="/sources/{{ row.id }}/quarantine">
@@ -79,13 +79,13 @@
 </form>
 <form method="post" action="/sources/{{ row.id }}/rename" class="mt-4">
   {{ gth_csrf_field(csrf_token|default(none)) }}
-  {{ gth_form_field("label", "Label", value=row.label, id="rename-label-" ~ row.id, help_text="Nothing on disk changes. Plans and library copies already made keep their paths.") }}
+  {{ gth_form_field("label", "Label", value=row.label, id="rename-label-" ~ row.id, input_attrs={"required": "required"}, help_text="Nothing on disk changes. Plans and library copies already made keep their paths.") }}
   <button type="submit" class="btn btn-primary">Rename</button>
 </form>
 <form method="post" action="/sources/{{ row.id }}/forget" class="mt-4">
   {{ gth_csrf_field(csrf_token|default(none)) }}
   {{ gth_alert("Forgetting removes this source from the ledger: its catalogued files, exact pairs and the decisions on them, and its entries in the journals of plans that were undone. The folder and its files stay exactly as they are. A source with files in an applied plan that hasn't been undone, or in the library, can't be forgotten.", kind="warning") }}
-  {{ gth_form_field("confirm", "Type " ~ row.label ~ " to confirm", id="forget-confirm-" ~ row.id) }}
+  {{ gth_form_field("confirm", "Type " ~ row.label ~ " to confirm", id="forget-confirm-" ~ row.id, input_attrs={"required": "required"}) }}
   <button type="submit" class="btn btn-outline-danger">Forget this source</button>
 </form>
 {% endcall %}

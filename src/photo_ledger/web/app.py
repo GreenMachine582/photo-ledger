@@ -4,6 +4,7 @@ from pathlib import Path
 
 import greentechhub_ui
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -28,6 +29,7 @@ from photo_ledger import __version__
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db.activity import SqliteAuditStore, SqliteNotificationStore
 from photo_ledger.errors import PhotoLedgerError
+from photo_ledger.web.errors import describe
 from photo_ledger.web.htmx import HtmxRedirectMiddleware, back_path
 from photo_ledger.web.routes import (
     catalogue,
@@ -144,16 +146,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(exports.router)
     app.include_router(settings_routes.router)
 
-    @app.exception_handler(PhotoLedgerError)
-    async def expected_failure(request: Request, exc: PhotoLedgerError):
-        """An expected refusal, such as deciding a pair that no longer matches: say why. An
-        htmx form goes back to its page, with the reason as a toast."""
+    def refuse(request: Request, message: str, status_code: int) -> Response:
+        """Say why something was refused. An htmx form goes back to its page, with the reason
+        as a toast. A plain form or link gets the notice page."""
         if request.headers.get("HX-Request") == "true":
             response = Response(status_code=200, headers={"HX-Redirect": back_path(request)})
-            flash(response, str(exc), kind="danger")
+            flash(response, message, kind="danger")
             return response
         return templates.TemplateResponse(
-            request, "notice.html", {"message": str(exc)}, status_code=409
+            request, "notice.html", {"message": message}, status_code=status_code
         )
+
+    @app.exception_handler(PhotoLedgerError)
+    async def expected_failure(request: Request, exc: PhotoLedgerError):
+        """An expected refusal, such as deciding a pair that no longer matches."""
+        return refuse(request, str(exc), 409)
+
+    @app.exception_handler(RequestValidationError)
+    async def unreadable_form(request: Request, exc: RequestValidationError):
+        """A missing or malformed field or link id, named in a sentence instead of FastAPI's
+        JSON. It replaces greentechhub-fastapi's JSON handler: this app has no JSON API."""
+        return refuse(request, describe(exc), 422)
 
     return app

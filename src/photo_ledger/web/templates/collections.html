@@ -17,7 +17,7 @@
     <form method="post" action="/collections/rename">
       {{ gth_csrf_field(csrf_token|default(none)) }}
       {{ gth_select("collection", "Collection", options, id="rename-collection") }}
-      {{ gth_form_field("name", "New name") }}
+      {{ gth_form_field("name", "New name", input_attrs={"required": "required"}) }}
       <button type="submit" class="btn btn-primary">Rename</button>
     </form>
     {% endcall %}
