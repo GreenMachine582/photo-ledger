@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.9.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.8.0...v0.9.0) (2026-11-07)
+
+
+### Features
+
+* **web:** create, run, pause and resume scans in the browser ([#27](https://github.com/GreenMachine582/photo-ledger/issues/27)) ([69f715f](https://github.com/GreenMachine582/photo-ledger/commit/69f715f545a6b3332782f64799d8045b020bac6c))
+* **web:** notifications and an activity page ([#28](https://github.com/GreenMachine582/photo-ledger/issues/28)) ([3610d28](https://github.com/GreenMachine582/photo-ledger/commit/3610d28f0f5b4caf5ce0e1ac3c68efd9fbf60c4f))
+* **web:** pick folders with a folder explorer ([#24](https://github.com/GreenMachine582/photo-ledger/issues/24)) ([fca9e67](https://github.com/GreenMachine582/photo-ledger/commit/fca9e6793b06d93caa8fa6d35cdf4f27c593b6e4))
+* **web:** scan pages with actions and live progress ([#31](https://github.com/GreenMachine582/photo-ledger/issues/31)) ([3da5c08](https://github.com/GreenMachine582/photo-ledger/commit/3da5c0845f2781e368f9c2059b41a3d8827415d5))
+* **web:** show library build progress in the Build popup ([#34](https://github.com/GreenMachine582/photo-ledger/issues/34)) ([ac907d7](https://github.com/GreenMachine582/photo-ledger/commit/ac907d7df88cb048447da7a37fa2b5d5c6afbc34))
+
+
+### Bug Fixes
+
+* **library:** copy again pictures that are gone from the library folder ([#35](https://github.com/GreenMachine582/photo-ledger/issues/35)) ([717d445](https://github.com/GreenMachine582/photo-ledger/commit/717d4451ab2fd8e6c10487cd7bef7cd14c9cda7e))
+* **scanner:** read MPO multi-picture JPEGs instead of marking them unsupported ([#32](https://github.com/GreenMachine582/photo-ledger/issues/32)) ([7798504](https://github.com/GreenMachine582/photo-ledger/commit/7798504eb7a761aad99d39b619d0e8075b7e803e))
+* **scanner:** skip macOS AppleDouble ._ files instead of decoding them ([#33](https://github.com/GreenMachine582/photo-ledger/issues/33)) ([fcf139b](https://github.com/GreenMachine582/photo-ledger/commit/fcf139b9c738cdf34528e2b3b6f3afa38fc5281b))
+* **web:** readable errors for missing or invalid form fields ([#30](https://github.com/GreenMachine582/photo-ledger/issues/30)) ([8142632](https://github.com/GreenMachine582/photo-ledger/commit/8142632e50ecc48c71097455db70806ece3f8210))
+
+
+### Build
+
+* **deps:** greentechhub-core v0.17.0 and greentechhub-fastapi v0.19.0 ([#26](https://github.com/GreenMachine582/photo-ledger/issues/26)) ([a9f05f6](https://github.com/GreenMachine582/photo-ledger/commit/a9f05f6125fcb9a17d296a7abcd3ba951b55f264))
+
 ## [0.8.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.7.0...v0.8.0) (2026-11-05)
 
 
