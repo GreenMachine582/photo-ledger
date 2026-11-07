@@ -81,6 +81,11 @@ def forget_unbuilt(conn: sqlite3.Connection) -> None:
     conn.execute("DELETE FROM library_entries WHERE state IN ('pending', 'failed')")
 
 
+def forget_entries(conn: sqlite3.Connection, entry_ids: list[int]) -> None:
+    """Drop the given entries, such as copies gone from the library folder, to plan them again."""
+    conn.executemany("DELETE FROM library_entries WHERE id = ?", [(i,) for i in entry_ids])
+
+
 def forget_all(conn: sqlite3.Connection) -> None:
     """A new library folder starts empty. The old folder and its files are left as they are."""
     conn.execute("DELETE FROM library_entries")

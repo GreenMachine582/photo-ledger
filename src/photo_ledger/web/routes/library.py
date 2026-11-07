@@ -63,7 +63,7 @@ def page_context(conn: sqlite3.Connection) -> dict:
         ],
         can_build=bool(to_build and online and not problems),
         cards=[
-            {"label": "Built", "value": f"{counts.get('done', 0):,}"},
+            {"label": "Built", "value": f"{summary.already:,}"},
             {"label": "Planned to copy", "value": f"{to_build:,}"},
             {"label": "Not planned yet", "value": f"{max(summary.to_copy - to_build, 0):,}"},
             {"label": "Waiting for review", "value": f"{summary.waiting:,}"},
