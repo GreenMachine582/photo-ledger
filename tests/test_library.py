@@ -487,3 +487,65 @@ def test_a_build_reports_each_copy_then_each_sidecar(library):
     assert copying == [(n, result.copied) for n in range(1, result.copied + 1)]
     assert finishing[-1] == (len(finishing), len(finishing)) and len(finishing) == result.copied
     assert calls.index((1, len(finishing), "finishing")) > calls.index(copying[-1] + ("copying",))
+
+
+def test_a_library_folder_renamed_away_and_recreated_is_built_again(library):
+    conn, root, folder = built_library(library)
+    sources_before = snapshot(root)
+    moved = folder.with_name("library-old")
+    folder.rename(moved)
+    folder.mkdir()  # a new, empty folder at the same path
+    old_library = snapshot(moved)
+    settings.set_library(conn, folder, "year")  # the same path again keeps the records
+
+    changes = conn.total_changes
+    summary = plan.preview(conn)
+    assert (summary.gone, summary.to_copy, summary.already) == (
+        len(YEAR_LAYOUT),
+        len(YEAR_LAYOUT),
+        0,
+    )
+    assert conn.total_changes == changes  # previewing writes nothing
+
+    _summary, result = build(conn)
+    assert (result.status, result.copied, result.failed) == ("complete", len(YEAR_LAYOUT), [])
+    assert set(library_files(folder)) == set(YEAR_LAYOUT)
+    assert queries.counts(conn) == {"done": len(YEAR_LAYOUT)}
+    assert snapshot(moved) == old_library  # the old folder is left exactly as it was
+    assert snapshot(root) == sources_before
+
+
+def test_only_a_deleted_copy_is_copied_again(library):
+    conn, _root, folder = built_library(library)
+    gone = next(iter(YEAR_LAYOUT))
+    (folder / gone).unlink()
+    summary = plan.plan_library(conn)
+    assert (summary.gone, summary.to_copy, summary.already) == (1, 1, len(YEAR_LAYOUT) - 1)
+    assert queries.counts(conn) == {"done": len(YEAR_LAYOUT) - 1, "pending": 1}
+    assert [e["rel_path"] for e in queries.entries(conn, "pending")] == [gone]
+    result = executor.build_library(conn)
+    assert result.copied == 1 and (folder / gone).is_file()
+
+
+def test_an_offline_library_is_never_taken_for_an_empty_one(library):
+    conn, _root, folder = built_library(library)
+    held = folder.with_name("library-unplugged")
+    folder.rename(held)  # the drive is unplugged: no folder at the path at all
+    assert plan.preview(conn).gone == 0
+    plan.plan_library(conn)
+    assert queries.counts(conn) == {"done": len(YEAR_LAYOUT)}
+
+
+def test_another_drive_at_the_library_path_is_never_taken_for_an_empty_one(library, monkeypatch):
+    conn, _root, folder = built_library(library)
+    with conn:
+        conn.execute("UPDATE library SET volume_id = 'AAAA-0001'")
+    for path in folder.rglob("*"):
+        if path.is_file():
+            path.unlink()  # whatever is at that path now holds none of the copies
+    monkeypatch.setattr(
+        settings.device, "describe", lambda _path: settings.device.DeviceInfo(volume_id="BBBB-0002")
+    )
+    assert plan.preview(conn).gone == 0
+    plan.plan_library(conn)
+    assert queries.counts(conn) == {"done": len(YEAR_LAYOUT)}

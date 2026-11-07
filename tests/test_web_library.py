@@ -31,6 +31,15 @@ def wait_for_build(client, timeout=60):
     raise AssertionError("the build never finished")
 
 
+def build_and_wait(client):
+    """Start a build from the popup and wait until it reloads the page."""
+    started = client.post(
+        "/library/build", data={"csrf_token": client.cookies["gth_csrf"]}, headers=HTMX
+    )
+    assert started.status_code == 200
+    return wait_for_build(client)
+
+
 def test_every_action_needs_a_csrf_token(ledger, web):
     conn, root, _ = ledger
     for url in ("/library", "/library/plan", "/library/build", "/scans/1/remove"):
@@ -174,3 +183,26 @@ def test_a_build_needs_the_csrf_token(ledger, app_client):
     assert app_client.get("/library/build/progress", headers=HTMX).headers.get("HX-Redirect") == (
         "/library"
     )  # no build ran: the popup just reloads the page
+
+
+def test_the_page_says_when_built_copies_are_gone_and_rebuilds_them(ledger, app_client):
+    conn, root, _ = ledger
+    folder = root.parent / "library"
+    folder.mkdir()
+    post(app_client, "/library", path=str(folder), layout="year")
+    settle_everything(conn)
+    post(app_client, "/library/plan")
+    build_and_wait(app_client)
+    assert set(library_files(folder)) == set(YEAR_LAYOUT)
+
+    folder.rename(root.parent / "library-old")
+    folder.mkdir()
+    post(app_client, "/library", path=str(folder), layout="year")
+    page = app_client.get("/library").text
+    assert f"{len(YEAR_LAYOUT)} pictures built earlier are no longer in" in page
+
+    post(app_client, "/library/plan")
+    build_and_wait(app_client)
+    built = app_client.get("/library").text
+    assert "Built." in built and "no longer in" not in built
+    assert set(library_files(folder)) == set(YEAR_LAYOUT)

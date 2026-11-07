@@ -52,6 +52,7 @@
 {% endcall %}
 {% endif %}
 
+{% if summary.gone %}{{ gth_alert(("1 picture" if summary.gone == 1 else "{:,} pictures".format(summary.gone)) ~ " built earlier " ~ ("is" if summary.gone == 1 else "are") ~ " no longer in " ~ library.root_path ~ ", perhaps moved or renamed away. Plan to copy " ~ ("it" if summary.gone == 1 else "them") ~ " again: nothing at the old place is touched.", kind="info") }}{% endif %}
 {% if summary.to_copy %}<p class="text-body-secondary">{{ summary.to_copy }} settled pictures ({{ to_copy_size }}) aren't in the library yet.</p>{% endif %}
 {% if summary.waiting %}<p class="text-body-secondary">{{ summary.waiting }} pictures wait for review, as they still have open, skipped or changed pairs.</p>{% endif %}
 {% if summary.corrupt %}<p class="text-body-secondary">{{ summary.corrupt }} pictures are left out, as no copy of them can be decoded.</p>{% endif %}

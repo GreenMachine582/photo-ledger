@@ -264,6 +264,11 @@ def _echo_library_plan(summary: library_plan.LibraryPlan) -> None:
         f"To copy: {summary.to_copy} pictures ({human_size(summary.to_copy_bytes)}). "
         f"Already in the library: {summary.already}."
     )
+    if summary.gone:
+        typer.echo(
+            f"{summary.gone} pictures built earlier are no longer in the library folder, so "
+            "they're copied again. Nothing at the old place is touched."
+        )
     if summary.waiting:
         typer.echo(
             f"{summary.waiting} pictures wait for review, as they still have open, skipped "

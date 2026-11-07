@@ -69,7 +69,9 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
   copied. Choosing a new folder forgets the entries and leaves the old folder as it is.
 - **Library entries:** One per picture (`content_id` is unique), naming the copy it comes from and its `rel_path`
   under the library root, which is unique ignoring case. `state` is `pending`, `started`, `done` or `failed`. Entries
-  that are `done` keep their place for good. A rebuild replaces the unbuilt ones and only ever adds files.
+  that are `done` keep their place while their file is in the library folder. A rebuild replaces the unbuilt ones and
+  only ever adds files. A `done` copy that's gone from a connected library folder, deleted or moved or renamed away, is
+  dropped at the next plan and planned again; an offline library, or another volume at its path, keeps every entry.
   `sidecar_blake3` is the hash of the sidecar the build last wrote, and a sidecar is only replaced while it still has
   that hash. `applied_date` is the capture date last given to the copy as its file date.
 - **Date fixes:** One per content, so every copy shares it and rescans leave it alone. `captured_at` is
