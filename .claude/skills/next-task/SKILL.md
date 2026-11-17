@@ -1,6 +1,6 @@
 ---
 name: next-task
-description: Pick up the next piece of work in photo-ledger. Syncs main, reads TODO.md, checks nothing is already in flight, reads the docs the item touches and creates a correctly named branch. Use when asked to "pick up work", "start the next milestone", "what's next" or to start a named TODO item.
+description: Pick up the next piece of work in photo-ledger. Fetches dev, reads TODO.md, checks nothing is already in flight, reads the docs the item touches and starts a correctly named branch in its own worktree. Use when asked to "pick up work", "start the next milestone", "what's next" or to start a named TODO item.
 ---
 
 # Pick up the next task
@@ -12,8 +12,9 @@ Work through these steps in order and report briefly as you go.
 ```bash
 git status --short          # stop and ask if the tree is dirty
 git fetch --prune
-git switch main && git pull --ff-only
 ```
+
+Work branches off `dev`, the default branch. `main` only takes release PRs (see CONTRIBUTING.md).
 
 Never rebase or force-push anything (see CONTRIBUTING.md).
 
@@ -46,9 +47,13 @@ If an open PR or remote branch already covers the item, stop and tell the user i
 Name it `<area>/<short-description>`, where the area is the package or topic, such as `scanner/resumable-walk`,
 `db/migrations` or `docs/rescans`.
 
+Start it in its own worktree, from the main checkout:
+
 ```bash
-git switch -c <area>/<short-description>
+rk wt start <area>/<short-description>
 ```
+
+It branches off `origin/dev`, runs the setup and prints the worktree's path. Work only in that worktree from here on.
 
 ## 6. Report
 

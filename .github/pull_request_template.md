@@ -1,7 +1,7 @@
 ## Summary
 
-<!-- What changes and why. The PR title must be a conventional commit (feat: …, fix(scope): …, docs: …):
-     PRs are squash-merged and the title becomes the changelog line. Add ! for a breaking change. -->
+<!-- What changes and why. The PR title is a plain sentence, not a conventional commit: PRs are merged with a
+     merge commit, so the commits carry the changelog. Mark a breaking change with ! in its commit. -->
 
 ## How it was verified
 

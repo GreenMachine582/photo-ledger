@@ -40,3 +40,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# >>> repo-kit: local
+# Worktree-local links written by `rk wt start --link`
+.repo-kit.local.toml
+# <<< repo-kit: local
