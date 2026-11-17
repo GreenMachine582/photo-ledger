@@ -12,3 +12,5 @@ release_type = "python"
 [checks]
 # This repo's own CI job (ci.yml), required next to the pr-checks ones.
 required = ["test"]
+
+# pilot: a deliberate conflict with the [worktree] block
