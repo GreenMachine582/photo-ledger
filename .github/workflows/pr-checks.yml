@@ -1,5 +1,6 @@
 # Managed by repo-kit: `rk sync` rewrites this file. Change .repo-kit.toml or repo-kit, not this file.
 # The checks every PR must pass: pr-checks / commits, pr-title and managed-files. See repo-kit's
+# pilot: a hand edit, which managed-files must refuse
 # docs/checks-and-release.md.
 name: pr-checks
 
