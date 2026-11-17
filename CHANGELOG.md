@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/GreenMachine582/photo-ledger/compare/v0.9.0...v0.9.1) (2026-11-17)
+
+
+### Build
+
+* build each worktree its own venv with rk wt start ([a734ce8](https://github.com/GreenMachine582/photo-ledger/commit/a734ce874a19232e35ac1b1defaeef105ef3d4a6))
+
 ## [0.9.0](https://github.com/GreenMachine582/photo-ledger/compare/v0.8.0...v0.9.0) (2026-11-07)
 
 
