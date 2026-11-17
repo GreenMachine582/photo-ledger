@@ -1,0 +1,41 @@
+# Managed by repo-kit: `rk sync` rewrites this file. Change .repo-kit.toml or repo-kit, not this file.
+# Keeps every ready PR current with its base, as gth-pr-bot. See repo-kit's docs/pr-updates.md.
+# It runs on `workflow_run`, which always uses the default branch's copy of this file, and its key lives in
+# the gth-pr-bot environment, which only the default branch may use: no pushed branch can reach the key.
+name: update-prs
+
+on:
+  # Safe use of workflow_run: nothing from the trigger run (code, artifacts, branch names in a shell) reaches
+  # this run; the pre-check passes the branch to jq and gh through env only.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [update-prs trigger]
+    types: [completed]
+  # Dispatch it from the default branch: the environment refuses a run from any other.
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Report what would happen and write nothing
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  update-prs:
+    # Idle until `rk configure` has enrolled this repo.
+    if: vars.GTH_PR_BOT_CLIENT_ID != ''
+    # pull-requests: read is for the pre-check that skips pushes no PR depends on.
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: GreenMachine582/repo-kit/.github/workflows/update-prs.yml@v0.3.0
+    with:
+      ref: v0.3.0
+      client-id: ${{ vars.GTH_PR_BOT_CLIENT_ID }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+      trigger-event: ${{ github.event.workflow_run.event || github.event_name }}
+      trigger-branch: ${{ github.event.workflow_run.head_branch }}
+      conflict-label: "needs-merge"
+    # Passed by name, but it resolves only inside the reusable workflow's gth-pr-bot environment job.
+    secrets:
+      PR_BOT_PRIVATE_KEY: ${{ secrets.GTH_PR_BOT_PRIVATE_KEY }}

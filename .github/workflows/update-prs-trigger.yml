@@ -1,0 +1,20 @@
+# Managed by repo-kit: `rk sync` rewrites this file. Change .repo-kit.toml or repo-kit, not this file.
+# Starts update-prs (update-prs.yml) on each push and PR event, and holds nothing itself: no secrets, no
+# permissions. update-prs runs on `workflow_run` of this workflow, so it always runs the default
+# branch's copy of itself, and a pushed branch can't change the run that holds gth-pr-bot's key.
+# See repo-kit's docs/pr-updates.md.
+name: update-prs trigger
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [edited, ready_for_review, reopened, closed, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "update-prs runs next, from the default branch's workflow file"

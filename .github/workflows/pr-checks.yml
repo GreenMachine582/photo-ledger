@@ -1,0 +1,24 @@
+# Managed by repo-kit: `rk sync` rewrites this file. Change .repo-kit.toml or repo-kit, not this file.
+# The checks every PR must pass: pr-checks / commits, pr-title and managed-files. See repo-kit's
+# docs/checks-and-release.md.
+name: pr-checks
+
+on:
+  pull_request:
+    # `edited`: a title change re-runs pr-title.
+    types: [opened, synchronize, reopened, edited]
+
+permissions: {}
+
+# A newer push makes the running checks moot.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-checks:
+    permissions:
+      contents: read
+    uses: GreenMachine582/repo-kit/.github/workflows/pr-checks.yml@v0.3.0
+    with:
+      ref: v0.3.0

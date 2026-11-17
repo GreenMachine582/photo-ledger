@@ -45,5 +45,11 @@ in a synced folder such as OneDrive. On Windows the tools are in `.venv/Scripts/
 - `src/` layout, numbered SQL migrations, standard library `sqlite3`.
 - Pages use `gth-*` macros, not Bootstrap or HTMX directly. See greentechhub-ui's docs.
 - Bump the three GTH pins together, to tags only. See [CONTRIBUTING.md](CONTRIBUTING.md).
-- Commits and PR titles are Conventional Commits.
+- Commits are Conventional Commits. PR titles are plain sentences (merge-commit model). See
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+- The branch model, CI callers, release flow and rulesets come from
+  [repo-kit](https://github.com/GreenMachine582/repo-kit), configured in `.repo-kit.toml`. Files it manages are
+  listed in `.repo-kit.lock`: change them through `.repo-kit.toml` and `rk sync`, not by hand, or
+  `pr-checks / managed-files` fails. Start each branch with `rk wt start <area>/<desc>` and work in the printed
+  worktree. PRs go to `dev`.
 - [TODO.md](TODO.md) holds open work only. Remove an item when it ships.
