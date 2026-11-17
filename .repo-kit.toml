@@ -1,0 +1,21 @@
+# repo-kit's config for this repo: the one input to everything rk generates or applies.
+# `rk install` wrote this file once; it is yours from here on. Every key and its default:
+# https://github.com/GreenMachine582/repo-kit/blob/main/docs/configuration.md
+
+version = "0.3.0"            # the one pin; change it with `rk upgrade`
+profile = "dev-main"
+
+[project]
+name = "photo-ledger"
+release_type = "python"
+
+[checks]
+# This repo's own CI job (ci.yml), required next to the pr-checks ones.
+required = ["test"]
+
+[worktree]
+# `rk wt start` builds each worktree its own venv. `--python .venv` keeps the install in it even when
+# another venv is active in the shell (VIRTUAL_ENV would otherwise win).
+setup = ["uv venv", "uv pip install --python .venv -e .[dev]"]
+check = "uv run --no-sync --python .venv pytest -q"
+env_dirs = [".venv"]

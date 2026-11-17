@@ -1,16 +1,16 @@
 ---
 name: open-pr
-description: Open or update a pull request for photo-ledger the way CONTRIBUTING.md requires. Runs the checks, audits the diff against the CLAUDE.md hard rules, confirms TODO.md and the docs are updated, writes a Conventional Commit title and the PR template body, then pushes and creates or updates the PR. Use when asked to "open a PR", "raise a PR", "push this up" or "update the PR".
+description: Open or update a pull request for photo-ledger the way CONTRIBUTING.md requires. Runs the checks, audits the diff against the CLAUDE.md hard rules, confirms TODO.md and the docs are updated, writes a plain-sentence title and the PR template body, then pushes and opens a draft PR to dev, marking it ready once CI is green. Use when asked to "open a PR", "raise a PR", "push this up" or "update the PR".
 ---
 
 # Open or update a PR
 
 ## 1. Preconditions
 
-- You're on a feature branch, never `main`.
+- You're on a feature branch in its own worktree, never `dev` or `main`.
 - The work is committed. Commits are Conventional Commits with a first line of at most 100 characters and a body that
-  explains why. They're signed (`git log --show-signature -1` should show a good signature), which is required on
-  `main`.
+  explains why (`rk check commits origin/dev..HEAD`). They're signed (`git log --show-signature -1` should show a
+  good signature).
 - End every commit message with the attribution line from the current session's instructions.
 
 ## 2. Run the checks
@@ -20,8 +20,8 @@ Use the `check` skill. Don't continue until it passes.
 ## 3. Audit the diff against the hard rules
 
 ```bash
-git diff origin/main...HEAD --stat
-git diff origin/main...HEAD
+git diff origin/dev...HEAD --stat
+git diff origin/dev...HEAD
 ```
 
 Stop and fix anything that breaks these:
@@ -32,7 +32,7 @@ Stop and fix anything that breaks these:
 2. **No delete operations on user files.** Look for `os.remove`, `os.unlink`, `Path.unlink`, `shutil.rmtree` and
    `send2trash`.
 3. **Nothing private.** No staged images, `*.db` files or real paths:
-   `git diff origin/main...HEAD --name-only | grep -Ei '\.(jpe?g|png|heic|db)$'` must print nothing.
+   `git diff origin/dev...HEAD --name-only | grep -Ei '\.(jpe?g|png|heic|db)$'` must print nothing.
 4. The design rules: no FastAPI imports in `db/`, `sources/`, `scanner/`, `matching/` or `actions/`; every new
    state-changing route depends on `require_csrf`; nothing binds anywhere except `127.0.0.1`.
 
@@ -45,9 +45,9 @@ Stop and fix anything that breaks these:
 
 ## 5. Title and body
 
-- The title is a Conventional Commit of at most 100 characters, such as `feat: map sources and run resumable scans
-  (M1)`. It becomes the changelog line when the PR is squash-merged, and the `pr-title` check enforces it. Add `!`
-  for a breaking change.
+- The title is a plain sentence, **not** a Conventional Commit, such as `Map sources and run resumable scans (M1)`.
+  PRs are merged with a merge commit, so the commits carry the changelog, and a conventional title would list the
+  change twice. The `pr-checks / pr-title` check enforces it.
 - The body follows `.github/pull_request_template.md`:
 
 ```markdown
@@ -73,13 +73,15 @@ Write the body to a file in the scratchpad and pass it with `--body-file`. Don't
 ```bash
 git push -u origin HEAD
 gh pr view --json url,state 2>/dev/null   # is there a PR already?
-gh pr create --base main --title "<title>" --body-file <body.md>      # if none
-gh pr edit --title "<title>" --body-file <body.md>                    # if one exists
+gh pr create --draft --base dev --title "<title>" --body-file <body.md>   # if none
+gh pr edit --title "<title>" --body-file <body.md>                       # if one exists
 ```
 
-To update an open PR, add commits or merge `main` into the branch. Never rebase, amend pushed commits or force-push.
+To update an open PR, add commits, or run `rk wt sync` to merge in the remote branch and the PR's base (the bot may
+have merged `dev` into it). Never rebase, amend pushed commits or force-push.
 
-## 7. Report
+## 7. Ready and report
 
-Give the user the PR URL and run `gh pr checks` (add `--watch` only if they want to wait). Report any failing check with
-its log (`gh run view <id> --log-failed`).
+Wait for `gh pr checks`, and read the results. Once every check is green, mark it ready with `gh pr ready`: ready PRs
+are kept current with `dev` by the bot. Give the user the PR URL. Report any failing check with its log
+(`gh run view <id> --log-failed`). The user merges.

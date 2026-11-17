@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "repo-kit": {
+      "source": {
+        "source": "github",
+        "repo": "GreenMachine582/repo-kit"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "repo-kit@repo-kit": true
+  }
+}
