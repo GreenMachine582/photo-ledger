@@ -3,12 +3,12 @@
     ".github/workflows/pr-checks.yml": {
       "layer": "common",
       "mode": "managed",
-      "sha256": "e0100e96cfb7141d9e02708e74c8d7c539c74e3ec1f4f0c5cf3127d163682fde"
+      "sha256": "d8acfa4f346b049cf6c68f7626dcb26aa431865e2230dfb652a4c484f9a90c25"
     },
     ".github/workflows/release.yml": {
       "layer": "profiles/dev-main",
       "mode": "managed",
-      "sha256": "a67136ffb6ae41d4a20e33db06b65837dee040dce9c56e12386464c764ae8fbe"
+      "sha256": "8f0c8686a48b84a4d8cd9568488aabb195bbe7736e7cf9452f5c6992d263e13e"
     },
     ".github/workflows/update-prs-trigger.yml": {
       "layer": "common",
@@ -18,7 +18,7 @@
     ".github/workflows/update-prs.yml": {
       "layer": "common",
       "mode": "managed",
-      "sha256": "a06a757cab9485694db11aa77511052a412346575d548af3a7fd849bb78c652d"
+      "sha256": "4f20a1bd056d0e60cf15a1f1216e13377a02aaf926d8d4b667a6012f26fb9ae7"
     },
     ".gitignore": {
       "blocks": {
@@ -66,5 +66,7 @@
       "sha256": "e990604605a17839a9b91ee8b28f7018cb722e92aee06171ef0453d4772807fe"
     }
   },
-  "version": "0.3.0"
+  "ref_sha": "5910d0e79d430a93401fea500d0e57691ac1c47c",
+  "ref_sha_version": "0.4.0",
+  "version": "0.4.0"
 }

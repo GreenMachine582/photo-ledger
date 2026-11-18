@@ -2,7 +2,7 @@
 # `rk install` wrote this file once; it is yours from here on. Every key and its default:
 # https://github.com/GreenMachine582/repo-kit/blob/main/docs/configuration.md
 
-version = "0.3.0"            # the one pin; change it with `rk upgrade`
+version = "0.4.0"            # the one pin; change it with `rk upgrade`
 profile = "dev-main"
 
 [project]

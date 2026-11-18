@@ -12,7 +12,7 @@ jobs:
   release:
     permissions:
       contents: read
-    uses: GreenMachine582/repo-kit/.github/workflows/release.yml@v0.3.0
+    uses: GreenMachine582/repo-kit/.github/workflows/release.yml@5910d0e79d430a93401fea500d0e57691ac1c47c # v0.4.0
     with:
       client-id: ${{ vars.GTH_RELEASE_BOT_CLIENT_ID }}
       target-branch: main
