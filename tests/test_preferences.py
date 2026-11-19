@@ -47,3 +47,49 @@ def test_bad_values_store_nothing(db, threshold, folders, message):
     with pytest.raises(preferences.PreferencesError, match=message):
         preferences.save(db, similar_threshold=threshold, generic_folders=folders)
     assert db.execute("SELECT COUNT(*) FROM settings").fetchone()[0] == 0
+
+
+def test_matching_and_rule_switches_default_on(db, tmp_path):
+    prefs = preferences.effective(db, Settings(photo_ledger_data_dir=tmp_path))
+    assert prefs.name_conflicts and prefs.auto_tidier_path and prefs.auto_priority
+    assert prefs.dismiss_unlike_names and prefs.min_similar_side == 0
+    assert prefs.match_options() == {"name_conflicts": True, "min_similar_side": 0}
+    assert prefs.rules() == {
+        "tidier_path": True,
+        "priority": True,
+        "unlike_names": True,
+        "threshold": 8,
+    }
+    env = Settings(photo_ledger_data_dir=tmp_path, photo_ledger_auto_tidier_path=False)
+    assert preferences.effective(db, env).auto_tidier_path is False
+
+
+def test_switches_and_the_smallest_size_are_saved(db, tmp_path):
+    preferences.save(
+        db,
+        similar_threshold=8,
+        generic_folders="",
+        min_similar_side="200",
+        auto_tidier_path="false",
+        name_conflicts="true",
+    )
+    prefs = preferences.effective(db, Settings(photo_ledger_data_dir=tmp_path))
+    assert prefs.auto_tidier_path is False and prefs.name_conflicts is True
+    assert prefs.min_similar_side == 200
+    assert {"auto_tidier_path", "min_similar_side"} <= prefs.saved
+    assert "auto_priority" not in prefs.saved  # left out, so it keeps its default
+
+
+@pytest.mark.parametrize(
+    ("values", "message"),
+    [
+        ({"min_similar_side": "-1"}, "between 0 and 10,000"),
+        ({"min_similar_side": "big"}, "whole number"),
+        ({"auto_priority": "maybe"}, "isn't on or off"),
+        ({"surprise": "true"}, "Unknown setting"),
+    ],
+)
+def test_bad_switches_store_nothing(db, values, message):
+    with pytest.raises(preferences.PreferencesError, match=message):
+        preferences.save(db, similar_threshold=8, generic_folders="", **values)
+    assert db.execute("SELECT COUNT(*) FROM settings").fetchone()[0] == 0

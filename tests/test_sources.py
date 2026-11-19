@@ -387,3 +387,11 @@ def test_forget_after_choosing_a_new_library_folder(ledger):
     library_settings.set_library(conn, root.parent / "library-2")
     sources.forget_source(conn, "camera")
     assert (root.parent / "library").is_dir()
+
+
+def test_forgetting_a_source_matches_again_with_the_saved_options(ledger):
+    """With name conflicts off, forgetting a source mustn't bring them back."""
+    conn, _, _ = ledger
+    count = "SELECT COUNT(*) FROM review_pairs WHERE kind = 'name_conflict' AND status = 'open'"
+    sources.forget_source(conn, "backup", threshold=8, name_conflicts=False)
+    assert conn.execute(count).fetchone()[0] == 0

@@ -1,8 +1,8 @@
-"""Settings you edit in the browser: the similar threshold and the generic folder names.
+"""Settings you edit in the browser: what a match finds, and which obvious pairs it decides.
 
 They're stored in the catalogue's ``settings`` table. A stored value wins over the
 ``PHOTO_LEDGER_*`` environment variable, and resetting goes back to it. They only change what the
-next match finds: nothing on disk changes, and no FastAPI here.
+next match does: nothing on disk changes, and no FastAPI here.
 """
 
 import json
@@ -14,7 +14,10 @@ from photo_ledger.db import now_iso
 from photo_ledger.errors import PhotoLedgerError
 
 THRESHOLD_MIN, THRESHOLD_MAX = 0, 32
-KEYS = ("similar_threshold", "generic_folders")
+MIN_SIDE_MAX = 10000
+#: Switches, in the order the Settings page shows them.
+FLAGS = ("name_conflicts", "auto_tidier_path", "auto_priority", "dismiss_unlike_names")
+KEYS = ("similar_threshold", "generic_folders", "min_similar_side", *FLAGS)
 
 
 class PreferencesError(PhotoLedgerError):
@@ -25,8 +28,26 @@ class PreferencesError(PhotoLedgerError):
 class Preferences:
     similar_threshold: int
     generic_folders: list[str]
+    name_conflicts: bool = True
+    min_similar_side: int = 0
+    auto_tidier_path: bool = True
+    auto_priority: bool = True
+    dismiss_unlike_names: bool = True
     #: The names of the settings that come from the catalogue, not the environment.
     saved: frozenset[str] = frozenset()
+
+    def match_options(self) -> dict:
+        """What ``matching.pairs.match`` takes, beside the threshold."""
+        return {"name_conflicts": self.name_conflicts, "min_similar_side": self.min_similar_side}
+
+    def rules(self) -> dict:
+        """What ``review.automatic.apply`` takes."""
+        return {
+            "tidier_path": self.auto_tidier_path,
+            "priority": self.auto_priority,
+            "unlike_names": self.dismiss_unlike_names,
+            "threshold": self.similar_threshold,
+        }
 
 
 def _stored(conn: sqlite3.Connection) -> dict:
@@ -37,11 +58,9 @@ def _stored(conn: sqlite3.Connection) -> dict:
 def effective(conn: sqlite3.Connection, settings: Settings) -> Preferences:
     """The settings a match uses: the saved ones, else the environment's or the defaults."""
     stored = _stored(conn)
-    return Preferences(
-        similar_threshold=stored.get("similar_threshold", settings.photo_ledger_similar_threshold),
-        generic_folders=stored.get("generic_folders", list(settings.photo_ledger_generic_folders)),
-        saved=frozenset(stored),
-    )
+    env = {key: getattr(settings, f"photo_ledger_{key}") for key in KEYS}
+    env["generic_folders"] = list(env["generic_folders"])
+    return Preferences(**{**env, **stored}, saved=frozenset(stored))
 
 
 def parse_threshold(value: str | int) -> int:
@@ -54,6 +73,29 @@ def parse_threshold(value: str | int) -> int:
             f"The similar threshold must be between {THRESHOLD_MIN} and {THRESHOLD_MAX}."
         )
     return threshold
+
+
+def parse_min_side(value: str | int) -> int:
+    text = str(value).strip()
+    try:
+        side = int(text) if text else 0
+    except ValueError:
+        raise PreferencesError("The smallest image size must be a whole number.") from None
+    if not 0 <= side <= MIN_SIDE_MAX:
+        raise PreferencesError(
+            f"The smallest image size must be between 0 and {MIN_SIDE_MAX:,} pixels."
+        )
+    return side
+
+
+def parse_flag(value: str | bool) -> bool:
+    """A switch: ``true`` or ``false``, as a form sends them."""
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text not in ("true", "false"):
+        raise PreferencesError(f"'{value}' isn't on or off.")
+    return text == "true"
 
 
 def parse_folders(value: str | list[str]) -> list[str]:
@@ -72,13 +114,27 @@ def parse_folders(value: str | list[str]) -> list[str]:
 
 
 def save(
-    conn: sqlite3.Connection, *, similar_threshold: str | int, generic_folders: str | list[str]
+    conn: sqlite3.Connection,
+    *,
+    similar_threshold: str | int,
+    generic_folders: str | list[str],
+    min_similar_side: str | int | None = None,
+    **flags: str | bool,
 ) -> None:
-    """Check both values, then store them together. Nothing is stored if either is wrong."""
+    """Check every value given, then store them together. Nothing is stored if one is wrong.
+
+    ``flags`` are the switches in ``FLAGS``. A setting left out keeps what it had.
+    """
+    unknown = set(flags) - set(FLAGS)
+    if unknown:
+        raise PreferencesError(f"Unknown setting: {', '.join(sorted(unknown))}.")
     values = {
         "similar_threshold": parse_threshold(similar_threshold),
         "generic_folders": parse_folders(generic_folders),
     }
+    if min_similar_side is not None:
+        values["min_similar_side"] = parse_min_side(min_similar_side)
+    values.update({key: parse_flag(value) for key, value in flags.items()})
     with conn:
         conn.executemany(
             "INSERT INTO settings (key, value, set_at) VALUES (?, ?, ?)"

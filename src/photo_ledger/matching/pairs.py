@@ -9,8 +9,13 @@ ones by a stable key, so rescanning unchanged files never creates a pair or reop
 | ``similar``       | two contents with close pHashes   | the two BLAKE3 hashes              |
 | ``name_conflict`` | one filename on two contents      | the two BLAKE3 hashes              |
 
-Keys sort their members, so swapping left and right can't make a second pair. Similar pairs are
-never resolved here or anywhere else automatically.
+Keys sort their members, so swapping left and right can't make a second pair. Nothing is decided
+here. Similar pairs are never decided automatically anywhere; the rules in ``review/automatic.py``
+only decide exact copies and name conflicts between pictures that don't look alike.
+
+Two settings change what's found: ``name_conflicts=False`` stops finding name conflicts, and
+``min_similar_side`` leaves images smaller than that, on their longest side, out of similar
+matching. Pairs either drops close as obsolete, unless they were already decided.
 """
 
 import json
@@ -61,7 +66,12 @@ Scorer = Callable[[str, list[sqlite3.Row], list[sqlite3.Row]], dict | None]
 
 
 def find_candidates(
-    conn: sqlite3.Connection, threshold: int = DEFAULT_THRESHOLD, scorer: Scorer | None = None
+    conn: sqlite3.Connection,
+    threshold: int = DEFAULT_THRESHOLD,
+    scorer: Scorer | None = None,
+    *,
+    name_conflicts: bool = True,
+    min_similar_side: int = 0,
 ) -> dict[str, Candidate]:
     """Every pair the catalogue supports right now, by key.
 
@@ -115,12 +125,16 @@ def find_candidates(
             scan_id=_latest(content_scan(a), content_scan(b)),
         )
 
-    hashes = {cid: int(row["phash"], 16) for cid, row in first.items() if row["phash"]}
+    hashes = {
+        cid: int(row["phash"], 16)
+        for cid, row in first.items()
+        if row["phash"] and _big_enough(row, min_similar_side)
+    }
     for content_a, content_b, distance in similar_pairs(hashes, threshold):
         add_content_pair("similar", content_a, content_b, distance)
 
     by_name: dict[str, set[int]] = defaultdict(set)
-    for row in files:
+    for row in files if name_conflicts else ():
         by_name[row["filename"].casefold()].add(row["content_id"])
     for content_ids in by_name.values():
         for content_a, content_b in combinations(sorted(content_ids), 2):
@@ -129,11 +143,29 @@ def find_candidates(
     return candidates
 
 
+def _big_enough(row: sqlite3.Row, min_side: int) -> bool:
+    """Whether a content takes part in similar matching. Unknown dimensions always do."""
+    if min_side <= 0 or row["width"] is None or row["height"] is None:
+        return True
+    return max(row["width"], row["height"]) >= min_side
+
+
 def match(
-    conn: sqlite3.Connection, threshold: int = DEFAULT_THRESHOLD, scorer: Scorer | None = suggest
+    conn: sqlite3.Connection,
+    threshold: int = DEFAULT_THRESHOLD,
+    scorer: Scorer | None = suggest,
+    *,
+    name_conflicts: bool = True,
+    min_similar_side: int = 0,
 ) -> MatchResult:
     """Bring the stored pairs in line with the catalogue, in one transaction."""
-    candidates = find_candidates(conn, threshold, scorer)
+    candidates = find_candidates(
+        conn,
+        threshold,
+        scorer,
+        name_conflicts=name_conflicts,
+        min_similar_side=min_similar_side,
+    )
     stored = queries.all_pairs(conn)
     result = MatchResult()
     now = now_iso()

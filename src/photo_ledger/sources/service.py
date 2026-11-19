@@ -267,15 +267,20 @@ def forget_usage(conn: sqlite3.Connection, label: str) -> dict[str, int]:
     return queries.usage(conn, get_source(conn, label)["id"])
 
 
-def forget_source(conn: sqlite3.Connection, label: str) -> dict[str, int]:
+def forget_source(
+    conn: sqlite3.Connection, label: str, *, threshold: int | None = None, **match_options
+) -> dict[str, int]:
     """Remove a source from the ledger: its catalogued files, exact pairs and their decisions.
 
     The folder itself is never touched. A source whose files are in an applied or incomplete plan,
     or in a built library copy, is refused, as that history is what undo, recovery and the library
     rely on. Once every plan that touched it has been undone, its rows in those journals are
     removed with it. Returns what was removed.
+
+    The pairs left are matched again with ``threshold`` and ``match_options``: pass the saved
+    settings, so a setting such as finding no name conflicts still holds.
     """
-    from photo_ledger.matching.pairs import match
+    from photo_ledger.matching.pairs import DEFAULT_THRESHOLD, match
     from photo_ledger.review.decisions import forget_pairs
 
     source = get_source(conn, label)
@@ -298,5 +303,5 @@ def forget_source(conn: sqlite3.Connection, label: str) -> dict[str, int]:
         queries.delete_pairs(conn, pair_ids)
         queries.delete(conn, source["id"])
     # Similar and name-conflict pairs that relied on its copies close by the usual rules.
-    match(conn)
+    match(conn, DEFAULT_THRESHOLD if threshold is None else threshold, **match_options)
     return usage

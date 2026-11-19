@@ -1,5 +1,6 @@
 """Command line entry point: sources, scans, matching, reports, plans and exports."""
 
+import dataclasses
 import signal
 import sqlite3
 import threading
@@ -13,7 +14,6 @@ import uvicorn
 from photo_ledger import __version__, preferences
 from photo_ledger import sources as source_service
 from photo_ledger.actions import dryrun, executor, planner, recovery
-from photo_ledger.collections.folders import refresh_collections
 from photo_ledger.config import LOCAL_HOSTS, Settings
 from photo_ledger.db import library as library_queries
 from photo_ledger.db import open_db
@@ -23,8 +23,8 @@ from photo_ledger.formatting import human_size
 from photo_ledger.library import dates as library_dates
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
-from photo_ledger.matching import pairs as pair_matching
 from photo_ledger.matching import reports
+from photo_ledger.matching import run as match_run
 from photo_ledger.scanner import engine
 
 app = typer.Typer(help="Catalogue photo backups, find duplicates and organise them safely.")
@@ -91,24 +91,37 @@ def match(
         help="Largest pHash distance that counts as similar.",
     ),
 ) -> None:
-    """Find exact duplicates, similar images and name conflicts. Only reads the catalogue."""
+    """Find exact duplicates, similar images and name conflicts, then decide the obvious ones.
+
+    Which obvious pairs are decided is set on the Settings page. Only the catalogue changes.
+    """
     with catalogue() as conn:
         prefs = preferences.effective(conn, Settings())
-        limit = prefs.similar_threshold if threshold is None else threshold
-        collections = refresh_collections(conn, prefs.generic_folders)
+        if threshold is not None:
+            prefs = dataclasses.replace(prefs, similar_threshold=threshold)
+        run = match_run.run_match(conn, prefs)
+        collections, result = run.collections, run.pairs
         typer.echo(
             f"Collections from folder names: {collections.total_collections} "
             f"({collections.new_collections} new, {collections.new_folders} folders mapped)."
         )
-        result = pair_matching.match(conn, limit)
         found = ", ".join(
             f"{n} {kind.replace('_', ' ')}" for kind, n in sorted(result.by_kind.items())
         )
-        typer.echo(f"Matched with a similarity threshold of {limit}: {found or 'no pairs'}.")
+        typer.echo(
+            f"Matched with a similarity threshold of {prefs.similar_threshold}: "
+            f"{found or 'no pairs'}."
+        )
         typer.echo(
             f"{result.new} new, {result.reopened} reopened, {result.needs_review} need review, "
             f"{result.obsolete} closed, {result.unchanged} unchanged."
         )
+        decided = match_run.automatic_lines(run.automatic)
+        if decided:
+            typer.echo(
+                "Decided automatically: " + ", ".join(decided) + ". Nothing moves until a plan "
+                "is applied; turn the rules off or reopen these on the Settings page."
+            )
 
 
 @app.command()
@@ -496,7 +509,10 @@ def source_forget(
                 + "? The folder isn't touched.",
                 abort=True,
             )
-        source_service.forget_source(conn, label)
+        prefs = preferences.effective(conn, Settings())
+        source_service.forget_source(
+            conn, label, threshold=prefs.similar_threshold, **prefs.match_options()
+        )
         typer.echo(f"Forgot '{label}'. Its folder is unchanged; map it again to bring it back.")
 
 

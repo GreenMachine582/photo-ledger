@@ -198,3 +198,27 @@ def test_an_obsolete_pair_reopens_when_it_matches_again(db, scanned):
     run_scan(db, "all")
     assert match(db).reopened == 1
     assert described(db) == normalise(HAND_CHECKED)
+
+
+def _statuses(db, kind):
+    rows = db.execute("SELECT status FROM review_pairs WHERE kind = ?", (kind,))
+    return sorted(row[0] for row in rows)
+
+
+def test_name_conflicts_can_be_turned_off(db, scanned):
+    match(db)
+    assert _statuses(db, "name_conflict") == ["open"]
+    result = match(db, name_conflicts=False)
+    assert "name_conflict" not in result.by_kind
+    assert _statuses(db, "name_conflict") == ["obsolete"]
+    match(db)
+    assert _statuses(db, "name_conflict") == ["open"]  # back when it's turned on again
+
+
+def test_small_images_can_be_left_out_of_similar_matching(db, scanned):
+    match(db)
+    assert _statuses(db, "similar") == ["open", "open"]
+    # IMG_0002_small.jpg is 160 x 120, its original 320 x 240.
+    result = match(db, min_similar_side=200)
+    assert _statuses(db, "similar") == ["obsolete", "open"]
+    assert result.by_kind["exact"] == 5  # exact duplicates are always found

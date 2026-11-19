@@ -10,6 +10,11 @@
 Closing the rejected item's other pairs is what makes N copies take N - 1 reviews. Rejecting a
 similar image's content rejects every copy of it. Decisions belong to pairs, never to scans or
 sessions, so resolving a pair in one scan resolves it in all of them.
+
+A decision is made by ``you`` on the review page, or ``auto`` by a rule at match (see
+``review/automatic.py``), with the rule's name. Closures carry both from the decision that caused
+them. Undo on the review page only takes back your own decisions; ``reopen_automatic`` takes back
+the rules'.
 """
 
 import sqlite3
@@ -40,14 +45,16 @@ def _active(conn: sqlite3.Connection, pair_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
-def _record(conn, pair, action, *, rejected=(None, None), caused_by=None, status) -> int:
+def _record(
+    conn, pair, action, *, rejected=(None, None), caused_by=None, status, by="you", rule=None
+) -> int:
     decision_id = conn.execute(
         """
         INSERT INTO decisions (pair_id, action, rejected_kind, rejected_id, caused_by,
-                               previous_status, decided_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+                               previous_status, decided_at, decided_by, rule)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (pair["id"], action, *rejected, caused_by, pair["status"], now_iso()),
+        (pair["id"], action, *rejected, caused_by, pair["status"], now_iso(), by, rule),
     ).lastrowid
     conn.execute(
         "UPDATE review_pairs SET status = ?, updated_at = ? WHERE id = ?",
@@ -99,46 +106,85 @@ def _pairs_touching(conn, kind: str, item_id: int, exclude: int) -> list[sqlite3
 
 
 def decide(conn: sqlite3.Connection, pair_id: int, action: str) -> int:
-    """Record a decision on a pair, replacing any earlier one, and return its ID."""
+    """Record your decision on a pair, replacing any earlier one, and return its ID."""
+    with conn:
+        return record_decision(conn, pair_id, action)
+
+
+def record_decision(
+    conn: sqlite3.Connection,
+    pair_id: int,
+    action: str,
+    *,
+    by: str = "you",
+    rule: str | None = None,
+) -> int:
+    """``decide`` inside the caller's transaction, by ``you`` or by a rule (``auto``)."""
     if action not in ACTIONS:
         raise DecisionError(f"Unknown action '{action}'. Use one of: {', '.join(ACTIONS)}.")
-    with conn:
+    pair = _pair(conn, pair_id)
+    if pair["status"] == "obsolete":
+        raise DecisionError(
+            f"Pair {pair_id} no longer matches, as a copy has gone. Run `match` to refresh."
+        )
+    earlier = _active(conn, pair_id)
+    if earlier is not None:
+        # A closure only drops itself; the decision that caused it stands.
+        _revert(conn, earlier, with_closures=earlier["action"] != "closed")
         pair = _pair(conn, pair_id)
-        if pair["status"] == "obsolete":
-            raise DecisionError(
-                f"Pair {pair_id} no longer matches, as a copy has gone. Run `match` to refresh."
-            )
-        earlier = _active(conn, pair_id)
-        if earlier is not None:
-            # A closure only drops itself; the decision that caused it stands.
-            _revert(conn, earlier, with_closures=earlier["action"] != "closed")
-            pair = _pair(conn, pair_id)
 
-        if action == "skip":
-            return _record(conn, pair, action, status="skipped")
-        if action == "keep_both":
-            return _record(conn, pair, action, status="resolved")
+    made = {"by": by, "rule": rule}
+    if action == "skip":
+        return _record(conn, pair, action, status="skipped", **made)
+    if action == "keep_both":
+        return _record(conn, pair, action, status="resolved", **made)
 
-        rejected_side = "right_id" if action == "keep_left" else "left_id"
-        kind = "file" if pair["kind"] == "exact" else "content"
-        rejected = (kind, pair[rejected_side])
-        decision_id = _record(conn, pair, action, rejected=rejected, status="resolved")
-        for other in _pairs_touching(conn, kind, pair[rejected_side], exclude=pair_id):
-            _record(conn, other, "closed", caused_by=decision_id, status="resolved")
-        return decision_id
+    rejected_side = "right_id" if action == "keep_left" else "left_id"
+    kind = "file" if pair["kind"] == "exact" else "content"
+    rejected = (kind, pair[rejected_side])
+    decision_id = _record(conn, pair, action, rejected=rejected, status="resolved", **made)
+    for other in _pairs_touching(conn, kind, pair[rejected_side], exclude=pair_id):
+        _record(conn, other, "closed", caused_by=decision_id, status="resolved", **made)
+    return decision_id
 
 
 def undo_last(conn: sqlite3.Connection) -> int | None:
-    """Revert the most recent decision, and the closures it caused. Returns its pair's ID."""
+    """Revert your most recent decision, and the closures it caused. Returns its pair's ID.
+
+    A rule's decisions are left alone: they're taken back with ``reopen_automatic``.
+    """
     with conn:
         last = conn.execute(
             "SELECT * FROM decisions WHERE superseded_at IS NULL AND action != 'closed'"
-            " ORDER BY id DESC LIMIT 1"
+            " AND decided_by = 'you' ORDER BY id DESC LIMIT 1"
         ).fetchone()
         if last is None:
             return None
         _revert(conn, last)
         return last["pair_id"]
+
+
+def automatic_count(conn: sqlite3.Connection) -> int:
+    """How many pairs a rule decided that stand now, not counting the closures they caused."""
+    return conn.execute(
+        "SELECT COUNT(*) FROM decisions WHERE superseded_at IS NULL AND decided_by = 'auto'"
+        " AND action != 'closed'"
+    ).fetchone()[0]
+
+
+def reopen_automatic(conn: sqlite3.Connection) -> int:
+    """Take back every standing decision a rule made, with its closures. Returns how many.
+
+    The pairs go back to review, and as they've now had a decision no rule decides them again.
+    """
+    with conn:
+        rows = conn.execute(
+            "SELECT * FROM decisions WHERE superseded_at IS NULL AND decided_by = 'auto'"
+            " AND action != 'closed' ORDER BY id DESC"
+        ).fetchall()
+        for row in rows:
+            _revert(conn, row)
+    return len(rows)
 
 
 def _in_chunks(conn: sqlite3.Connection, query: str, ids: list[int]) -> list[sqlite3.Row]:

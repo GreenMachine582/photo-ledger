@@ -16,7 +16,7 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 | `collections` | `id`, `name`, `parent_id`, `hidden` | An album name, editable by you |
 | `collection_folders` | `source_id`, `folder_path`, `collection_id` | Which folder maps to which collection |
 | `review_pairs` | `id`, `pair_key`, `kind`, `left_id`, `right_id`, `distance`, `evidence`, `score_reasons`, `status`, `first_seen_scan_id`, `last_seen_scan_id`, `created_at`, `updated_at` | Two items to compare, shared by all scans |
-| `decisions` | `id`, `pair_id`, `action`, `rejected_kind`, `rejected_id`, `caused_by`, `previous_status`, `decided_at`, `superseded_at` | Append-only review history |
+| `decisions` | `id`, `pair_id`, `action`, `rejected_kind`, `rejected_id`, `caused_by`, `previous_status`, `decided_at`, `superseded_at`, `decided_by`, `rule` | Append-only review history, by you or by a rule at match |
 | `plans` | `id`, `status`, `undoes_plan_id`, `created_at`, `checked_at`, `applied_at` | A batch of file operations |
 | `plan_actions` | `id`, `plan_id`, `file_id`, `op`, `from_path`, `to_path`, `quarantine_root`, `quarantine_volume_id`, `expected_blake3`, `size_bytes`, `state`, `started_at`, `finished_at`, `error` | The operation journal, used for recovery and undo |
 | `library` | `id` (always 1), `root_path`, `volume_id`, `layout`, `created_at` | The destination library's folder and layout |
@@ -84,4 +84,6 @@ Every decision hangs on a stable pair, so a rescan can add work without undoing 
 The migrations in `src/photo_ledger/db/migrations/` are the source of truth. `0001` creates the M1 tables, `0002`
 adds `review_pairs`, `0003` adds `collections` and `collection_folders`, `0004` adds `decisions`, `0005` adds
 `plans` and `plan_actions`, `0006` adds `library` and `library_entries`, `0007` adds `date_fixes` and the
-library's sidecar and date columns, and `0008` adds `settings`, the values saved on the Settings page as JSON.
+library's sidecar and date columns, `0008` adds `settings`, the values saved on the Settings page as JSON, `0009`
+adds `notifications` and `audit_log`, and `0010` adds `decisions.decided_by` and `decisions.rule`, which record
+whether you or a rule at match made a decision.

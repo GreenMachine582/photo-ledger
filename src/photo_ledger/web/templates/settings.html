@@ -1,30 +1,51 @@
 {% extends "base.html" %}
 {% from "form.html" import gth_csrf_field, gth_form_field %}
+{% from "chips.html" import gth_switch %}
 {% from "badge.html" import gth_badge %}
 {% from "card.html" import gth_card %}
 {% from "modal.html" import gth_modal %}
 {% set page_title = "Settings" %}
-{% set page_subtitle = "What the next match looks for. Saving changes only the catalogue: nothing on disk." %}
+{% set page_subtitle = "What the next match looks for, and which obvious pairs it decides. Saving changes only the catalogue: nothing on disk." %}
 
 {% macro origin(key) -%}
 {{ gth_badge("saved here", tone="good") if key in prefs.saved else gth_badge("default", tone="neutral") }}
 {%- endmacro %}
 
+{% macro switch(key, label, help_text) -%}
+{{ gth_switch(key, label ~ " ", checked=prefs[key], value="true", off_value="false", help_text=help_text, field_class="mb-1") }}
+<p class="small mb-3">{{ origin(key) }}</p>
+{%- endmacro %}
+
 {% block page %}
-{% call gth_card(title="Matching") %}
 <form method="post" action="/settings">
-  {{ gth_csrf_field(csrf_token|default(none)) }}
+{{ gth_csrf_field(csrf_token|default(none)) }}
+{% call gth_card(title="Matching") %}
   <p class="mb-1">Similar threshold {{ origin("similar_threshold") }}</p>
   {{ gth_form_field("similar_threshold", "Largest pHash distance, out of 64 bits, that counts as a similar image", value=prefs.similar_threshold, type="number", min=minimum, max=maximum, step=1, input_attrs={"required": "required"}, help_text="Lower finds fewer, closer matches. 8 is the default. Similar images are never resolved automatically.") }}
+  <p class="mb-1">Ignore small images {{ origin("min_similar_side") }}</p>
+  {{ gth_form_field("min_similar_side", "Leave images smaller than this many pixels, on their longest side, out of similar matching", value=prefs.min_similar_side, type="number", min=0, max=max_side, step=1, help_text="Cuts thumbnail and icon noise. 0, the default, compares every image. Exact duplicates are always found.") }}
+  {{ switch("name_conflicts", "Find name conflicts", "One filename on two different pictures. Turn it off if camera numbering makes these noise: open ones close at the next match, and decided ones stay as they are.") }}
   <p class="mb-1">Generic folder names {{ origin("generic_folders") }}</p>
   {{ gth_form_field("generic_folders", "Folder names that never become collections, one per line", value=prefs.generic_folders|join("\n"), type="textarea", rows=6, help_text="Matched ignoring case. The defaults are " ~ default_folders ~ ".") }}
-  <p class="small text-body-secondary">Both apply at the next match. A match never reopens a finished review unless a file's content changed.</p>
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary">Save</button>
-    {% if prefs.saved %}<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#reset-settings">Reset to defaults</button>{% endif %}
-  </div>
-</form>
 {% endcall %}
+
+{% call gth_card(title="Decided automatically at match") %}
+  <p class="small text-body-secondary">These only decide what's obvious, and only pairs you haven't decided, skipped or reopened. Like any decision, they only build a plan: nothing moves until you apply one. Similar images are never decided automatically.</p>
+  {{ switch("auto_tidier_path", "Keep the tidier path for exact duplicates", "Byte-for-byte copies in sources of equal priority, with the same collections: keep the copy without a copy marker, such as (1) or copy at the end of its name, then the one with the shorter path. A tie stays for you.") }}
+  {{ switch("auto_priority", "Keep the higher-priority source for exact duplicates", "Byte-for-byte copies in sources of different keeper priority: keep the copy in the higher one. Set priorities on the Sources page.") }}
+  {{ switch("dismiss_unlike_names", "Keep both when a name clash doesn't look alike", "Two pictures that share a filename but are farther apart than the similar threshold are different photos. Nothing is rejected.") }}
+  {% if automatic %}
+  <p class="mb-0">{{ gth_badge("{:,} decided automatically".format(automatic), tone="neutral") }}
+    <button type="button" class="btn btn-link btn-sm" data-bs-toggle="modal" data-bs-target="#reopen-automatic">Reopen them for review</button></p>
+  {% endif %}
+{% endcall %}
+
+<p class="small text-body-secondary">Everything applies at the next match. A match never reopens a finished review unless a file's content changed.</p>
+<div class="d-flex gap-2">
+  <button type="submit" class="btn btn-primary">Save</button>
+  {% if prefs.saved %}<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#reset-settings">Reset to defaults</button>{% endif %}
+</div>
+</form>
 
 {% if prefs.saved %}
 {% call gth_modal("reset-settings", title="Reset to the defaults?") %}
@@ -33,6 +54,17 @@
   {{ gth_csrf_field(csrf_token|default(none)) }}
   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
   <button type="submit" class="btn btn-warning">Reset</button>
+</form>
+{% endcall %}
+{% endif %}
+
+{% if automatic %}
+{% call gth_modal("reopen-automatic", title="Reopen the automatic decisions?") %}
+<p>The {{ "{:,}".format(automatic) }} pairs a rule decided go back on the review page, with any pairs those decisions closed. No rule decides them again, so they wait for you. Your own decisions stay as they are.</p>
+<form method="post" action="/settings/reopen-automatic" class="d-flex justify-content-end gap-2">
+  {{ gth_csrf_field(csrf_token|default(none)) }}
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-warning">Reopen</button>
 </form>
 {% endcall %}
 {% endif %}
