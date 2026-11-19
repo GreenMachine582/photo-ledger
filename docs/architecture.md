@@ -16,7 +16,7 @@ map sources ──► scan ──► detect ──► review ──► plan ─�
 | `matching/` | Exact, similar and mismatch checks, stable pairs, scores | M2 |
 | `collections/` | Folder names to collections, and inheritance | M2 |
 | `review/` | Decisions, review sessions and what the comparison view shows | M3 |
-| `preferences.py` | The similar threshold and generic folder names saved on the Settings page, over the environment's | v1 |
+| `preferences.py` | The matching settings and automatic rules saved on the Settings page, over the environment's | v1 |
 | `activity.py` | What happened, for the Activity page and the notification bell, written through `db/activity.py` | v1 |
 | `thumbnails.py` | Cached previews in the data folder, read from sources only | M3 |
 | `web/` | FastAPI app and pages, using the GTH packages | M0 onwards |
@@ -92,7 +92,7 @@ are, not a rules file. Pins and upgrades are covered in [CONTRIBUTING.md](../CON
 | Should thumbnails be regenerated? | Yes, the cache is rebuildable |
 | Should decisions survive a database rebuild? | They can be exported as CSV and JSON |
 | Should similar matches be resolved automatically? | No |
-| Should exact duplicates be bulk-resolvable? | Yes, with explicit review and plan confirmation |
+| Should exact duplicates be bulk-resolvable? | Yes. Rules on the Settings page, on by default, decide copies told apart only by path or source priority at match. Each can be turned off, their decisions can all be reopened, and they still pass through plan confirmation |
 | Should original folder structures be preserved? | Yes, as an optional organisation mode |
 | Should the app support multiple libraries? | No: one database with many sources |
 | Should a scan's review include matches in other sources? | Yes, and resolving a pair resolves it in every scan |

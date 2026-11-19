@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from greentechhub_fastapi.auth.csrf import require_csrf
 
+from photo_ledger import preferences
 from photo_ledger.sources import service
 from photo_ledger.web.deps import get_db, notify, record, render
 
@@ -172,10 +173,14 @@ def rename(
 
 @router.post("/{source_id}/forget", dependencies=[Depends(require_csrf)])
 def forget(
-    source_id: int, confirm: str = Form(""), conn: sqlite3.Connection = Depends(get_db)
+    request: Request,
+    source_id: int,
+    confirm: str = Form(""),
+    conn: sqlite3.Connection = Depends(get_db),
 ) -> RedirectResponse:
     label = _label(conn, source_id)
     if confirm.strip() != label:
         raise service.SourceError(f"Type '{label}' to confirm forgetting it.")
-    service.forget_source(conn, label)
+    prefs = preferences.effective(conn, request.app.state.settings)
+    service.forget_source(conn, label, threshold=prefs.similar_threshold, **prefs.match_options())
     return _done("forgotten")

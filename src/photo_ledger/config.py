@@ -33,6 +33,14 @@ class Settings(GTHBaseSettings):
     photo_ledger_generic_folders: list[str] = Field(
         default_factory=lambda: list(DEFAULT_GENERIC_FOLDERS)
     )
+    #: Find name conflicts: one filename on two different pictures.
+    photo_ledger_name_conflicts: bool = True
+    #: Leave images smaller than this, in pixels on their longest side, out of similar matching.
+    photo_ledger_min_similar_side: int = Field(default=0, ge=0, le=10000)
+    #: Rules that decide obvious pairs at match (review/automatic.py).
+    photo_ledger_auto_tidier_path: bool = True
+    photo_ledger_auto_priority: bool = True
+    photo_ledger_dismiss_unlike_names: bool = True
 
     @property
     def db_path(self) -> Path:

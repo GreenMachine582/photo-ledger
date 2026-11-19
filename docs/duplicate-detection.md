@@ -83,3 +83,29 @@ ones it loses, and only you make the decision. A similar or name-conflict pair c
 | `collections` | Collections from folder names, with the folders, files and contents mapped to each |
 
 Similar matches are never resolved automatically. Bulk actions apply to exact duplicates only and pass through the plan.
+
+## Decided automatically
+
+After each match, rules on the Settings page decide the pairs that need no judgement (`review/automatic.py`). Each is
+on by default and can be turned off, there or with its `PHOTO_LEDGER_*` variable:
+
+| Rule | Variable | Decides |
+|---|---|---|
+| Keep the tidier path | `PHOTO_LEDGER_AUTO_TIDIER_PATH` | Exact copies in sources of equal priority: keeps the copy without a copy marker such as ` (1)`, then the shorter path |
+| Keep the higher-priority source | `PHOTO_LEDGER_AUTO_PRIORITY` | Exact copies in sources of different keeper priority: keeps the copy in the higher one |
+| Keep both when a name clash doesn't look alike | `PHOTO_LEDGER_DISMISS_UNLIKE_NAMES` | A name conflict whose pHashes are farther apart than the similar threshold: keeps both, rejecting nothing |
+
+Exact copies are byte-for-byte the same and share their collections, so keeping either loses nothing but a path. The
+copy kept is the one the review page would suggest. A group of copies is only decided when that copy beats every
+other one under a rule that's on; any tie stays for you. A rule never touches a pair that's been decided, even once and
+since undone, or one that's skipped or needs review. So a rule never overrules you, and a decision you take back isn't
+made again.
+
+The decisions record `decided_by = 'auto'` and the rule. Undo on the review page only takes back your own decisions.
+**Reopen them for review** on the Settings page takes back every automatic decision, and those pairs wait for you from
+then on. Like any decision, they only build a plan: nothing moves until you apply one.
+
+Two more settings change what a match finds. **Find name conflicts** (`PHOTO_LEDGER_NAME_CONFLICTS`, on) can be turned
+off when camera numbering makes them noise. **Ignore small images** (`PHOTO_LEDGER_MIN_SIMILAR_SIDE`, 0 for off)
+leaves images smaller than that many pixels, on their longest side, out of similar matching. Pairs either drops close
+at the next match, unless they're already decided. Exact duplicates are always found.

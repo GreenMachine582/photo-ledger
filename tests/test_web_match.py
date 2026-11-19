@@ -44,12 +44,16 @@ def test_match_from_the_browser(scanned, web):
     assert "<html" not in first.text  # just the panel, for htmx to swap in
     assert "Matched with a similarity threshold of 8" in first.text
     assert " exact<" in first.text and 'href="/review"' in first.text
+    assert "Decided automatically:" in first.text
+    assert "4 exact kept by tidier path" in first.text
+    assert "1 unlike name clashes kept both" in first.text
     found = conn.execute("SELECT COUNT(*) FROM review_pairs").fetchone()[0]
     assert found > 0
     assert conn.execute("SELECT COUNT(*) FROM collections").fetchone()[0] > 0
 
     again = web.post("/match", headers={**HX, **token})
     assert f"{found:,} unchanged" in again.text and "0 new" in again.text
+    assert "Decided automatically:" not in again.text  # nothing new to decide
     assert conn.execute("SELECT COUNT(*) FROM review_pairs").fetchone()[0] == found
     assert snapshot(root) == before
 
