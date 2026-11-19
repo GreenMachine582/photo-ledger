@@ -5,8 +5,8 @@ description: Run photo-ledger's lint, format check and tests from the project ve
 
 # Run the checks
 
-CI (`.github/workflows/ci.yml`) runs `ruff check .` and `pytest` on Ubuntu with Python 3.12. Run the same checks
-locally, plus the format check.
+CI (`.github/workflows/ci.yml`) runs `ruff check .`, `ruff format --check .` and `pytest` on Ubuntu, with pytest
+on Python 3.12 and 3.15. Run the same checks locally.
 
 ## 1. Find or create the venv
 

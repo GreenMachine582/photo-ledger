@@ -6,13 +6,27 @@ on:
   pull_request:
 
 jobs:
-  test:
+  pytest:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor in requires-python and the newest release. 3.14 is what we develop on locally.
+        python-version: ["3.12", "3.15"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: ruff check .
+      - if: matrix.python-version == '3.12'
+        run: ruff check . && ruff format --check .
       - run: pytest
+
+  # The ruleset requires a check called "test", so this job reports on the whole matrix.
+  test:
+    if: always()
+    needs: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.pytest.result }}" = success
