@@ -43,7 +43,7 @@ marked `required`, so the browser asks for them before anything is sent.
 
 Runtime data lives outside the repo, in the OS application data folder from `platformdirs`: `photo-ledger.db`,
 thumbnails and logs. Besides the GTH packages, the dependencies are `fastapi`, `uvicorn`, `typer` and `platformdirs`,
-with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `httpx` for development.
+with `pillow`, `imagehash` and `blake3` added in M1, and `pytest`, `ruff` and `httpx2` for development.
 
 ## Key decisions
 

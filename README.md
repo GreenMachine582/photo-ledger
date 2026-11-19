@@ -1,7 +1,7 @@
 # 🗂️ photo-ledger
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
-[![Status: Early Development](https://img.shields.io/badge/Status-Early%20Development-blue.svg)](TODO.md)
+[![Status: v1](https://img.shields.io/badge/Status-v1-brightgreen.svg)](TODO.md)
 [![Python](https://img.shields.io/badge/Python-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
