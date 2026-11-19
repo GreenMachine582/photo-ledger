@@ -19,10 +19,14 @@ class MigrationError(PhotoLedgerError):
     """The migrations on disk or the database's schema version are not usable."""
 
 
-def connect(path: Path) -> sqlite3.Connection:
-    """Open the catalogue with WAL, foreign keys and named-column rows."""
+def connect(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open the catalogue with WAL, foreign keys and named-column rows.
+
+    ``check_same_thread=False`` is only for a connection that moves between threads but is never
+    used by two at once, such as a web request's.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=30)
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA synchronous = NORMAL")
@@ -66,8 +70,8 @@ def migrate(conn: sqlite3.Connection) -> int:
     return schema_version(conn)
 
 
-def open_db(path: Path) -> sqlite3.Connection:
+def open_db(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Connect and bring the schema up to date."""
-    conn = connect(path)
+    conn = connect(path, check_same_thread=check_same_thread)
     migrate(conn)
     return conn
