@@ -1,7 +1,9 @@
 """The comparison screen and the image routes."""
 
+import os
 import re
 import threading
+from pathlib import Path
 
 from plan_helpers import A_BACKUP, A_CAMERA
 from review_helpers import exact_pair, file_id, status
@@ -124,21 +126,21 @@ def test_both_sides_of_an_exact_pair_get_their_shared_preview(ledger, settings, 
         assert [p.name for p in cache_dir.rglob("*") if p.is_file()] == [results["left_id"].name]
 
 
-def test_a_preview_another_request_just_made_is_used(ledger, settings, monkeypatch):
-    """On Windows, replacing a preview another request is still sending fails: use theirs."""
+def test_a_preview_another_request_just_made_is_kept(ledger, settings, monkeypatch):
+    """Another request may be sending the finished preview, so it's used and never replaced."""
     conn, _, _ = ledger
     target = file_id(conn, "camera/2019/IMG_0001.jpg")
     cache_dir = settings.thumbnail_dir
-    original_replace = type(cache_dir).replace
+    real_link = os.link
 
-    def busy(self, target_path):
-        original_replace(self, target_path)  # the other request's copy lands first
-        raise PermissionError("in use")
+    def theirs_first(source, destination):
+        Path(destination).write_bytes(b"theirs")  # the other request finishes first
+        real_link(source, destination)
 
-    monkeypatch.setattr(type(cache_dir), "replace", busy)
+    monkeypatch.setattr(thumbnails.os, "link", theirs_first)
     made = thumbnails.preview(conn, target, cache_dir)
-    assert made is not None and made.is_file()
-    assert [p for p in cache_dir.rglob("*") if p.is_file()] == [made]
+    assert made is not None and made.read_bytes() == b"theirs"
+    assert [p for p in cache_dir.rglob("*") if p.is_file()] == [made]  # no partial left
 
 
 def test_previews_are_cached_and_outlive_an_offline_source(ledger, web, settings):
