@@ -70,6 +70,13 @@ def test_map_list_and_refuse_an_overlap(web, conn, folders):
     assert snapshot(folders / "usb") == before
 
 
+def test_map_a_quoted_path_without_a_label(web, conn, folders):
+    """Explorer's "Copy as path" pastes the path in double quotes."""
+    added = post(web, "/sources", path=f'"{folders / "other"}"', label=" ")
+    assert "named after its folder" in added.text
+    assert source(conn, "other")["root_path"] == str((folders / "other").resolve())
+
+
 def test_check_marks_a_moved_folder_offline_and_reconnect_finds_it(
     web,
     conn,
@@ -107,7 +114,7 @@ def test_reconnect_to_a_typed_path_and_refuse_another_drive(
 ):
     sources.add_source(conn, folders / "usb", "usb")
     source_id = source(conn)["id"]
-    moved = post(web, f"/sources/{source_id}/reconnect", path=str(folders / "usb-moved"))
+    moved = post(web, f"/sources/{source_id}/reconnect", path=f'"{folders / "usb-moved"}"')
     assert "Reconnected" in moved.text
     fake_volume["id"] = "BBBB-0002"
     refused = post(web, f"/sources/{source_id}/reconnect", path=str(folders / "other"))
@@ -131,12 +138,12 @@ def test_priority_and_quarantine(web, conn, folders):
     assert "Priority saved" in post(web, f"/sources/{source_id}/priority", priority=5).text
     assert source(conn)["priority"] == 5
 
-    on = post(web, f"/sources/{source_id}/quarantine", path=str(folders / "q"))
+    on = post(web, f"/sources/{source_id}/quarantine", path=f'"{folders / "q"}"')
     assert "Quarantine is on" in on.text
     assert source(conn)["quarantine_path"] == str((folders / "q").resolve())
     inside = post(web, f"/sources/{source_id}/quarantine", path=str(folders / "usb"))
     assert inside.status_code == 409
-    empty = post(web, f"/sources/{source_id}/quarantine", path="")
+    empty = post(web, f"/sources/{source_id}/quarantine", path='""')
     assert empty.status_code == 409
 
     off = post(web, f"/sources/{source_id}/quarantine", off="true")

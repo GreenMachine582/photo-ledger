@@ -20,6 +20,8 @@ router = APIRouter(prefix="/sources")
 #: Results are shown from this fixed list, never from text in the URL.
 NOTICES = {
     "added": "Mapped. Mapping never changes the folder: scan it on the Scans page to catalogue it.",
+    "added-named": "Mapped, and named after its folder: rename it in its settings if you like. "
+    "Mapping never changes the folder: scan it on the Scans page to catalogue it.",
     "online": "Connected, and on the volume it was mapped on.",
     "offline": "Not connected, or a different drive is at that path. "
     "Nothing in it was marked missing.",
@@ -82,10 +84,10 @@ def sources_page(request: Request, conn: sqlite3.Connection = Depends(get_db)) -
 
 @router.post("", dependencies=[Depends(require_csrf)])
 def add(
-    path: str = Form(...), label: str = Form(...), conn: sqlite3.Connection = Depends(get_db)
+    path: str = Form(...), label: str = Form(""), conn: sqlite3.Connection = Depends(get_db)
 ) -> RedirectResponse:
-    service.add_source(conn, Path(path.strip()), label.strip())
-    return _done("added")
+    service.add_source(conn, Path(service.typed_path(path)), label.strip() or None)
+    return _done("added" if label.strip() else "added-named")
 
 
 @router.post("/check", dependencies=[Depends(require_csrf)])
@@ -124,11 +126,8 @@ def reconnect(
     source_id: int, path: str = Form(""), conn: sqlite3.Connection = Depends(get_db)
 ) -> RedirectResponse:
     label = _label(conn, source_id)
-    new_root = (
-        Path(path.strip())
-        if path.strip()
-        else service.find_new_root(service.get_source(conn, label))
-    )
+    path = service.typed_path(path)
+    new_root = Path(path) if path else service.find_new_root(service.get_source(conn, label))
     if new_root is None:
         raise service.SourceError(
             f"Couldn't find the volume for '{label}'. Connect it, or type its new location."
@@ -156,9 +155,10 @@ def quarantine(
     if off:
         service.set_quarantine(conn, label, None)
         return _done("quarantine-off")
-    if not path.strip():
+    path = service.typed_path(path)
+    if not path:
         raise service.SourceError("Type the quarantine folder, or turn quarantine off.")
-    _source, same_volume = service.set_quarantine(conn, label, Path(path.strip()))
+    _source, same_volume = service.set_quarantine(conn, label, Path(path))
     return _done("quarantine-far" if same_volume is False else "quarantine-on")
 
 

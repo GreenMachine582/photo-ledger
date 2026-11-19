@@ -1,4 +1,5 @@
 import sys
+from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
 from plan_helpers import F_BEST, F_CAMERA, F_JAPAN
@@ -9,7 +10,7 @@ from photo_ledger import sources
 from photo_ledger.review.decisions import decide
 from photo_ledger.sources import device
 from photo_ledger.sources.device import DeviceInfo
-from photo_ledger.sources.service import overlaps
+from photo_ledger.sources.service import overlaps, suggest_label, typed_path
 
 
 @pytest.fixture
@@ -84,6 +85,44 @@ def test_add_refuses_bad_input(db, tmp_path):
     sources.add_source(db, tmp_path, "ok")
     with pytest.raises(sources.SourceError, match="already exists"):
         sources.add_source(db, tmp_path, "ok")
+
+
+@pytest.mark.parametrize(
+    ("typed", "path"),
+    [
+        ('"C:\\Users\\me\\Green Abstract"', "C:\\Users\\me\\Green Abstract"),
+        ("  '/media/usb 1/Photos'  ", "/media/usb 1/Photos"),
+        ('" /media/usb "', "/media/usb"),
+        ("/media/usb", "/media/usb"),
+        ('"/media/usb', '"/media/usb'),
+        ("/media/it's here", "/media/it's here"),
+        ('""', ""),
+    ],
+)
+def test_typed_path_drops_surrounding_quotes(typed, path):
+    assert typed_path(typed) == path
+
+
+def test_suggest_label_names_it_after_the_folder(db, tmp_path):
+    assert suggest_label(db, PurePosixPath("/media/usb/Green Abstract")) == "Green Abstract"
+    assert suggest_label(db, PurePosixPath("/photos/Café & co")) == "Caf- - co"
+    assert suggest_label(db, PurePosixPath("/photos/.hidden")) == "hidden"
+    assert suggest_label(db, PurePosixPath("/photos/" + "x" * 80)) == "x" * 64
+    assert suggest_label(db, PureWindowsPath("E:\\"), "Backup") == "Backup"
+    assert suggest_label(db, PureWindowsPath("E:\\")) == "E drive"
+    assert suggest_label(db, PurePosixPath("/")) == "source"
+
+    (tmp_path / "Photos").mkdir()
+    sources.add_source(db, tmp_path / "Photos", "Photos")
+    assert suggest_label(db, PurePosixPath("/elsewhere/Photos")) == "Photos 2"
+    (tmp_path / "other").mkdir()
+    sources.add_source(db, tmp_path / "other", "Photos 2")
+    assert suggest_label(db, PurePosixPath("/elsewhere/Photos")) == "Photos 3"
+
+
+def test_add_without_a_label_uses_the_folder_name(db, tmp_path):
+    (tmp_path / "Green Abstract").mkdir()
+    assert sources.add_source(db, tmp_path / "Green Abstract")["label"] == "Green Abstract"
 
 
 def test_offline_when_missing_or_on_another_volume(db, tmp_path, fake_volume):

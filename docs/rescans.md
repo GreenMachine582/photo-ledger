@@ -4,8 +4,9 @@
 
 ## Mapping sources
 
-Add a source in the UI or with `source add <path> --label <name>`. A source can be an internal disk, an external USB
-drive, a network folder or removable media. The same scanner handles all four.
+Add a source in the UI or with `source add <path> --label <name>`. Without a label, it's named after its folder (or
+the drive, for a drive root), with a number added if that name is taken. A source can be an internal disk, an
+external USB drive, a network folder or removable media. The same scanner handles all four.
 
 - **Device details:** The storage type, volume identifier, label, filesystem and capacity are recorded on a best-effort
   basis. Nothing depends on knowing them in advance.
