@@ -6,7 +6,8 @@ resolved in one session or scan is resolved in every other.
 - ``scan``: a saved scan's name, or every scan
 - ``show``: ``open``, ``new`` (open since the scan last ran), ``skipped`` or ``needs_review``
 - ``kind``: ``exact``, ``similar`` or ``name_conflict``, or every kind
-- ``matches``: ``any`` (a copy in the scan's sources) or ``inside`` (both sides there)
+- ``within``: ``any`` (a copy in the scan's sources) or ``inside`` (both sides there). Shown as
+  "Matches". Not named ``matches``, which a form field would hide ``form.matches()`` behind.
 """
 
 import sqlite3
@@ -18,7 +19,7 @@ from photo_ledger.matching.sides import Catalogue, scan_source_ids, touches
 KIND_ORDER = "CASE kind WHEN 'exact' THEN 0 WHEN 'similar' THEN 1 ELSE 2 END"
 SHOW = ("open", "new", "skipped", "needs_review")
 KINDS = ("exact", "similar", "name_conflict")
-MATCHES = ("any", "inside")
+WITHIN = ("any", "inside")
 STATUS_FOR = {"open": "open", "new": "open", "skipped": "skipped", "needs_review": "needs_review"}
 
 
@@ -27,16 +28,16 @@ class Filters:
     scan: str | None = None
     show: str = "open"
     kind: str | None = None
-    matches: str = "any"
+    within: str = "any"
 
     @classmethod
-    def parse(cls, scan=None, show=None, kind=None, matches=None) -> "Filters":
+    def parse(cls, scan=None, show=None, kind=None, within=None) -> "Filters":
         """Filters from query parameters, falling back to the defaults for unknown values."""
         return cls(
             scan=scan or None,
             show=show if show in SHOW else "open",
             kind=kind if kind in KINDS else None,
-            matches=matches if matches in MATCHES else "any",
+            within=within if within in WITHIN else "any",
         )
 
     def query(self, **overrides) -> str:
@@ -81,7 +82,7 @@ def queue(conn: sqlite3.Connection, filters: Filters = Filters()) -> list[int]:
     found = []
     for row in rows:
         left, right = catalogue.sides(row)
-        if filters.matches == "inside":
+        if filters.within == "inside":
             in_scope = touches(left, scope) and touches(right, scope) and left and right
         else:
             in_scope = touches(left + right, scope) and (left or right)
@@ -91,5 +92,5 @@ def queue(conn: sqlite3.Connection, filters: Filters = Filters()) -> list[int]:
 
 
 def counts(conn: sqlite3.Connection, filters: Filters) -> dict[str, int]:
-    """How many pairs each ``show`` option holds, for the session's scan, kind and matches."""
+    """How many pairs each ``show`` option holds, for the session's scan, kind and scope."""
     return {show: len(queue(conn, Filters(**{**asdict(filters), "show": show}))) for show in SHOW}

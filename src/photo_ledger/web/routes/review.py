@@ -43,9 +43,9 @@ def _filters(
     scan: str | None = None,
     show: str | None = None,
     kind: str | None = None,
-    matches: str | None = None,
+    within: str | None = None,
 ) -> Filters:
-    return Filters.parse(scan=scan, show=show, kind=kind, matches=matches)
+    return Filters.parse(scan=scan, show=show, kind=kind, within=within)
 
 
 @router.get("", response_class=HTMLResponse)

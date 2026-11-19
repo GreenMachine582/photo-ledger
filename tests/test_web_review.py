@@ -216,3 +216,15 @@ def test_an_unknown_scan_is_explained(ledger, web):
     response = web.get("/review?scan=nope")
     assert response.status_code == 409
     assert "no scan called" in response.text
+
+
+#: Element methods htmx calls on a form. A field with one of these names hides the method behind
+#: the field (``form.matches`` is the field), and htmx then stops processing the page.
+FORM_METHODS = {"matches", "closest", "querySelector", "getAttribute", "hasAttribute", "submit"}
+
+
+def test_no_form_field_hides_a_method_htmx_calls(ledger, web):
+    page = web.get("/review?within=inside").text
+    names = set(re.findall(r'\bname="([^"]+)"', page))
+    assert not names & FORM_METHODS
+    assert re.search(r'<option value="inside"[^>]*selected', page)
