@@ -6,6 +6,7 @@ an offline source's photos can still be reviewed.
 
 import sqlite3
 from pathlib import Path
+from uuid import uuid4
 
 from PIL import Image, ImageOps
 
@@ -63,6 +64,9 @@ def preview(
     if path is None:
         return None
     ensure_outside_sources(conn, cached)
+    # Copies with the same content share one preview, and the review screen asks for both sides
+    # at once, so each request writes its own partial file and the first to finish wins.
+    partial = cached.with_name(f"{cached.stem}.{uuid4().hex}.part")
     try:
         with Image.open(path) as image:
             image = ImageOps.exif_transpose(image)
@@ -70,9 +74,11 @@ def preview(
             if image.mode not in ("RGB", "L"):
                 image = image.convert("RGB")
             cached.parent.mkdir(parents=True, exist_ok=True)
-            partial = cached.with_suffix(".part")
             image.save(partial, "JPEG", quality=85)
-            partial.replace(cached)
+        partial.replace(cached)
     except (OSError, ValueError, Image.DecompressionBombError):
-        return None
+        # Windows won't replace a preview another request is still sending: use that one.
+        return cached if cached.is_file() else None
+    finally:
+        partial.unlink(missing_ok=True)  # our own unfinished file in the cache, never a source
     return cached
