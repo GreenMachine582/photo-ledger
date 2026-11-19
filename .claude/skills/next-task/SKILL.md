@@ -44,13 +44,14 @@ If an open PR or remote branch already covers the item, stop and tell the user i
 
 ## 5. Branch
 
-Name it `<area>/<short-description>`, where the area is the package or topic, such as `scanner/resumable-walk`,
-`db/migrations` or `docs/rescans`.
+Name it `<type>/<short-description>`, where the type is the Conventional Commit type of the work, such as
+`feat/resumable-walk`, `fix/preview-threads` or `docs/rescans`. repo-kit accepts `feat`, `fix`, `perf`, `build`,
+`docs`, `refactor`, `test`, `ci`, `chore`, `style` and `revert`, and `rk wt start` refuses anything else.
 
 Start it in its own worktree, from the main checkout:
 
 ```bash
-rk wt start <area>/<short-description>
+rk wt start <type>/<short-description>
 ```
 
 It branches off `origin/dev`, runs the setup and prints the worktree's path. Work only in that worktree from here on.

@@ -50,6 +50,7 @@ in a synced folder such as OneDrive. On Windows the tools are in `.venv/Scripts/
 - The branch model, CI callers, release flow and rulesets come from
   [repo-kit](https://github.com/GreenMachine582/repo-kit), configured in `.repo-kit.toml`. Files it manages are
   listed in `.repo-kit.lock`: change them through `.repo-kit.toml` and `rk sync`, not by hand, or
-  `pr-checks / managed-files` fails. Start each branch with `rk wt start <area>/<desc>` and work in the printed
-  worktree. PRs go to `dev`.
+  `pr-checks / managed-files` fails. Start each branch with `rk wt start <type>/<desc>`, where the type is a
+  Conventional Commit type such as `feat`, `fix` or `docs` (repo-kit refuses any other prefix), and work in the
+  printed worktree. PRs go to `dev`.
 - [TODO.md](TODO.md) holds open work only. Remove an item when it ships.
