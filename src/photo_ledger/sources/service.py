@@ -78,12 +78,43 @@ def get_source(conn: sqlite3.Connection, label: str) -> sqlite3.Row:
     return row
 
 
-def add_source(conn: sqlite3.Connection, path: Path | str, label: str) -> sqlite3.Row:
-    """Map a folder or drive as a source, refusing one that overlaps an existing source."""
-    _check_label(conn, label)
+def typed_path(text: str) -> str:
+    """A path as typed or pasted, without surrounding spaces or one pair of surrounding quotes.
+
+    Explorer's "Copy as path" wraps the path in double quotes. Quotes inside a path are kept.
+    """
+    text = text.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        text = text[1:-1].strip()
+    return text
+
+
+def suggest_label(conn: sqlite3.Connection, root: PurePath, device_label: str | None = None) -> str:
+    """A free label for a source at ``root``: its folder's name, or the drive's for a drive root."""
+    name = root.name or device_label or (f"{root.drive.rstrip(':')} drive" if root.drive else "")
+    base = re.sub(r"[^A-Za-z0-9 ._-]", "-", name)
+    base = re.sub(r"^[^A-Za-z0-9]+", "", base)[:64].rstrip() or "source"
+    label, n = base, 1
+    while queries.by_label(conn, label):
+        n += 1
+        suffix = f" {n}"
+        label = base[: 64 - len(suffix)].rstrip() + suffix
+    return label
+
+
+def add_source(conn: sqlite3.Connection, path: Path | str, label: str | None = None) -> sqlite3.Row:
+    """Map a folder or drive as a source, refusing one that overlaps an existing source.
+
+    Without a label, the source is named after its folder (see :func:`suggest_label`).
+    """
+    if label is not None:
+        _check_label(conn, label)
     root = _resolve_root(path)
     _refuse_overlap(conn, root)
-    details = dataclasses.asdict(device.describe(root))
+    info = device.describe(root)
+    if label is None:
+        label = suggest_label(conn, root, info.device_label)
+    details = dataclasses.asdict(info)
     with conn:
         source_id = queries.insert(conn, label=label, root_path=str(root), device=details)
     return queries.by_id(conn, source_id)

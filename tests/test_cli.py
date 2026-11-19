@@ -38,6 +38,11 @@ def test_source_commands(tmp_path, monkeypatch):
     listed = runner.invoke(cli.app, ["source", "list"])
     assert "pc\tonline" in listed.stdout
 
+    (tmp_path / "Green Abstract").mkdir()
+    named = runner.invoke(cli.app, ["source", "add", str(tmp_path / "Green Abstract")])
+    assert named.exit_code == 0, named.output
+    assert "Mapped 'Green Abstract'" in named.stdout
+
     refused = runner.invoke(cli.app, ["source", "add", str(tmp_path), "--label", "all"])
     assert refused.exit_code == 1
     assert "overlaps" in refused.output

@@ -19,24 +19,24 @@ def csrf(web):
     return {"csrf_token": web.cookies["gth_csrf"]}
 
 
-def test_a_missing_field_is_named_on_the_notice_page(web, conn, tmp_path):
-    response = web.post("/sources", data={"path": str(tmp_path), **csrf(web)})
+def test_a_missing_field_is_named_on_the_notice_page(web, conn):
+    response = web.post("/sources", data={"label": "usb", **csrf(web)})
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("text/html")
-    assert "Fill in Label." in response.text
+    assert "Fill in Folder." in response.text
     assert '"detail"' not in response.text and "Field required" not in response.text
     assert sources.list_sources(conn) == []
 
 
-def test_an_htmx_form_goes_back_with_the_reason_as_a_toast(web, tmp_path):
+def test_an_htmx_form_goes_back_with_the_reason_as_a_toast(web):
     response = web.post(
         "/sources",
-        data={"path": str(tmp_path), **csrf(web)},
+        data={"label": "usb", **csrf(web)},
         headers={"HX-Request": "true", "Referer": "https://127.0.0.1/sources"},
     )
     assert response.status_code == 200
     assert response.headers["HX-Redirect"] == "/sources"
-    assert "Fill in Label." in web.get("/sources").text  # the toast, on the next page
+    assert "Fill in Folder." in web.get("/sources").text  # the toast, on the next page
 
 
 def test_a_number_field_says_it_needs_a_number(web, conn, tmp_path):
@@ -72,9 +72,10 @@ def test_several_problems_are_each_named_once():
 def test_required_fields_are_checked_by_the_browser_first(web):
     page = web.get("/sources").text
     assert 'id="map-path" name="path"' in page
-    for field_id in ("map-path", "gth-field-label"):
-        tag = page.split(f'id="{field_id}"', 1)[1].split(">", 1)[0]
-        assert 'required="required"' in tag, field_id
+    tag = page.split('id="map-path"', 1)[1].split(">", 1)[0]
+    assert 'required="required"' in tag
+    label = page.split('id="gth-field-label"', 1)[1].split(">", 1)[0]
+    assert "required" not in label  # left empty, it's the folder's name
     library = web.get("/library").text
     tag = library.split('id="library-path"', 1)[1].split(">", 1)[0]
     assert 'required="required"' in tag

@@ -24,6 +24,7 @@ from photo_ledger.formatting import human_size
 from photo_ledger.library import plan as library_plan
 from photo_ledger.library import settings as library_settings
 from photo_ledger.library.build_job import BUILD_KIND, build_job
+from photo_ledger.sources.service import typed_path
 from photo_ledger.web.deps import get_db, notify, render
 
 router = APIRouter(prefix="/library")
@@ -91,7 +92,7 @@ async def library_page(request: Request) -> HTMLResponse:
 def set_library(
     path: str = Form(...), layout: str = Form("year"), conn: sqlite3.Connection = Depends(get_db)
 ) -> RedirectResponse:
-    library_settings.set_library(conn, Path(path.strip()), layout)
+    library_settings.set_library(conn, Path(typed_path(path)), layout)
     return _done("set")
 
 

@@ -62,7 +62,7 @@ def test_set_plan_and_build_from_the_browser(ledger, app_client):
     unknown = post(web, "/library", path=str(folder), layout="sideways")
     assert unknown.status_code == 409
 
-    saved = post(web, "/library", path=str(folder), layout="year")
+    saved = post(web, "/library", path=f'"{folder}"', layout="year")  # as Explorer copies it
     assert "Library saved" in saved.text and str(folder.resolve()) in saved.text
     assert 'data-bs-target="#build-library"' not in saved.text  # nothing planned yet
 

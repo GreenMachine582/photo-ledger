@@ -369,7 +369,9 @@ def date_clear(
 @source_app.command("add")
 def source_add(
     path: Path = typer.Argument(..., help="Folder or drive root to map."),
-    label: str = typer.Option(..., "--label", "-l", help="A short, unique name for it."),
+    label: str | None = typer.Option(
+        None, "--label", "-l", help="A short, unique name for it. Defaults to the folder's name."
+    ),
 ) -> None:
     """Map a folder or drive. A folder inside, or containing, another source is refused."""
     with catalogue() as conn:

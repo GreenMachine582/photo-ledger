@@ -16,7 +16,7 @@
 <form method="post" action="/sources" class="row g-2 align-items-start">
   {{ gth_csrf_field(csrf_token|default(none)) }}
   <div class="col-md-7">{{ folder_picker("path", "Folder", "map-path", input_attrs={"required": "required"}, help_text="Browse to it, or type its full path, such as E:\\Photos or /media/usb-1/Photos.", field_class="mb-0") }}</div>
-  <div class="col-md-3">{{ gth_form_field("label", "Label", help_text="A short, unique name.", field_class="mb-0", input_attrs={"required": "required"}) }}</div>
+  <div class="col-md-3">{{ gth_form_field("label", "Label", help_text="A short, unique name. Leave it empty to use the folder's name.", field_class="mb-0") }}</div>
   <div class="col-md-2"><span class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</span><button type="submit" class="btn btn-primary w-100">Map</button></div>
 </form>
 <p class="text-body-secondary small mt-2 mb-0">A folder inside, or containing, another source or a quarantine is refused. Scan it afterwards on the <a href="/scans">Scans</a> page.</p>
