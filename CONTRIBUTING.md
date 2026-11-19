@@ -7,7 +7,9 @@ The branch model, PRs, commits and releases are shared across GreenMachine582's 
 `repo-kit:` markers below, which `rk sync` owns. One change per PR, and code and the docs that describe it go in the
 same PR.
 
-**Branch names:** `<area>/<short-description>`, such as `scanner/resumable-walk` or `docs/rescans`.
+**Branch names:** `<type>/<short-description>`, where the type is the Conventional Commit type of the work: `feat`,
+`fix`, `perf`, `build`, `docs`, `refactor`, `test`, `ci`, `chore`, `style` or `revert`. For example
+`feat/resumable-walk`, `fix/preview-threads` or `docs/rescans`. `rk wt start` refuses any other prefix.
 
 ## 📌 GTH pins
 
