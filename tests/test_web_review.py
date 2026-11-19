@@ -1,11 +1,16 @@
 """The comparison screen and the image routes."""
 
+import os
 import re
+import threading
+from pathlib import Path
 
+from plan_helpers import A_BACKUP, A_CAMERA
 from review_helpers import exact_pair, file_id, status
 from test_scanner import snapshot
 
 from photo_ledger import thumbnails
+from photo_ledger.db import open_db
 from photo_ledger.review.queue import queue
 
 
@@ -95,6 +100,49 @@ def test_unsupported_files_are_not_served(ledger, web):
     assert web.get(f"/files/{file_id(conn, 'camera/notes.txt')}/original").status_code == 404
 
 
+def test_both_sides_of_an_exact_pair_get_their_shared_preview(ledger, settings, tmp_path):
+    """Both copies have the same content, so the browser asks for the same cached preview twice
+    at once. Neither request may lose the race."""
+    conn, _, _ = ledger
+    pair = exact_pair(conn, A_CAMERA, A_BACKUP)
+    for round_ in range(20):
+        cache_dir = tmp_path / f"cache-{round_}"
+        start = threading.Barrier(2)
+        results = {}
+
+        def load(side):
+            own = open_db(settings.db_path)
+            try:
+                start.wait()
+                results[side] = thumbnails.preview(own, pair[side], cache_dir)
+            finally:
+                own.close()
+
+        threads = [threading.Thread(target=load, args=(side,)) for side in ("left_id", "right_id")]
+        [thread.start() for thread in threads]
+        [thread.join() for thread in threads]
+        assert results["left_id"] is not None and results["right_id"] is not None, round_
+        assert results["left_id"] == results["right_id"]
+        assert [p.name for p in cache_dir.rglob("*") if p.is_file()] == [results["left_id"].name]
+
+
+def test_a_preview_another_request_just_made_is_kept(ledger, settings, monkeypatch):
+    """Another request may be sending the finished preview, so it's used and never replaced."""
+    conn, _, _ = ledger
+    target = file_id(conn, "camera/2019/IMG_0001.jpg")
+    cache_dir = settings.thumbnail_dir
+    real_link = os.link
+
+    def theirs_first(source, destination):
+        Path(destination).write_bytes(b"theirs")  # the other request finishes first
+        real_link(source, destination)
+
+    monkeypatch.setattr(thumbnails.os, "link", theirs_first)
+    made = thumbnails.preview(conn, target, cache_dir)
+    assert made is not None and made.read_bytes() == b"theirs"
+    assert [p for p in cache_dir.rglob("*") if p.is_file()] == [made]  # no partial left
+
+
 def test_previews_are_cached_and_outlive_an_offline_source(ledger, web, settings):
     conn, root, _ = ledger
     before = snapshot(root)
@@ -170,3 +218,15 @@ def test_an_unknown_scan_is_explained(ledger, web):
     response = web.get("/review?scan=nope")
     assert response.status_code == 409
     assert "no scan called" in response.text
+
+
+#: Element methods htmx calls on a form. A field with one of these names hides the method behind
+#: the field (``form.matches`` is the field), and htmx then stops processing the page.
+FORM_METHODS = {"matches", "closest", "querySelector", "getAttribute", "hasAttribute", "submit"}
+
+
+def test_no_form_field_hides_a_method_htmx_calls(ledger, web):
+    page = web.get("/review?within=inside").text
+    names = set(re.findall(r'\bname="([^"]+)"', page))
+    assert not names & FORM_METHODS
+    assert re.search(r'<option value="inside"[^>]*selected', page)

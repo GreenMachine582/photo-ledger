@@ -16,7 +16,10 @@ from photo_ledger.db import open_db
 
 
 def get_db(request: Request) -> Iterator[sqlite3.Connection]:
-    conn = open_db(request.app.state.settings.db_path)
+    # FastAPI runs this sync dependency and a sync endpoint in threadpool threads that can
+    # differ, so the connection can't be tied to the thread that opened it. One request uses it
+    # in turn (open, endpoint, close), never from two threads at once.
+    conn = open_db(request.app.state.settings.db_path, check_same_thread=False)
     try:
         yield conn
     finally:

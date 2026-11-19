@@ -23,7 +23,7 @@
   {{ gth_select("show", "Show", show_options, value=filters.show, field_class="mb-0") }}
   {%- set kind_options = [("", "Any kind")] %}{% for kind in kinds %}{% set _ = kind_options.append((kind, kind.replace("_", " ")|capitalize)) %}{% endfor %}
   {{ gth_select("kind", "Kind", kind_options, value=filters.kind or "", field_class="mb-0") }}
-  {{ gth_select("matches", "Matches", [("any", "Any match"), ("inside", "Only inside the scan's sources")], value=filters.matches, field_class="mb-0") }}
+  {{ gth_select("within", "Matches", [("any", "Any match"), ("inside", "Only inside the scan's sources")], value=filters.within, field_class="mb-0") }}
   <button type="submit" class="btn btn-primary">Start</button>
 </form>
 {% if notice %}{{ gth_alert(notice, kind="warning") }}{% endif %}

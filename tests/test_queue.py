@@ -36,7 +36,7 @@ def test_all_scans_shows_every_open_pair_exact_first(scoped):
 
 
 @pytest.mark.parametrize(
-    ("scan", "matches", "expected"),
+    ("scan", "within", "expected"),
     [
         # Worked out from the fixtures: only Best of 2019 vs Japan has no camera copy.
         ("camera only", "any", 7),
@@ -48,9 +48,9 @@ def test_all_scans_shows_every_open_pair_exact_first(scoped):
         ("all", "inside", 8),
     ],
 )
-def test_scan_scopes(scoped, scan, matches, expected):
+def test_scan_scopes(scoped, scan, within, expected):
     conn, _, _ = scoped
-    assert len(queue(conn, Filters(scan=scan, matches=matches))) == expected
+    assert len(queue(conn, Filters(scan=scan, within=within))) == expected
 
 
 def test_kind_filter(scoped):
@@ -100,9 +100,9 @@ def test_new_since_the_scan_last_ran(scoped):
 
 def test_filters_round_trip_through_the_query_string(scoped):
     assert Filters().query() == ""
-    filters = Filters.parse(scan="all", show="skipped", kind="nope", matches="inside")
-    assert filters == Filters(scan="all", show="skipped", kind=None, matches="inside")
-    assert filters.query() == "?scan=all&show=skipped&matches=inside"
+    filters = Filters.parse(scan="all", show="skipped", kind="nope", within="inside")
+    assert filters == Filters(scan="all", show="skipped", kind=None, within="inside")
+    assert filters.query() == "?scan=all&show=skipped&within=inside"
     assert filters.query(pair=3).endswith("&pair=3")
 
 
